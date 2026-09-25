@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Planet Gear Balancer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+        .select-box { background-color: #334155; color: white; border: 1px solid #475569; }
+        .select-box:focus { outline: none; border-color: #3b82f6; ring: 2px solid #3b82f6; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Header & Language Toggle -->
+    <div class="w-full max-w-2xl flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-blue-400">🎣 FP Gear Balancer</h1>
+        <div class="flex space-x-2">
+            <button onclick="setLang('ru')" id="btn-ru" class="px-3 py-1 rounded bg-blue-600 text-white font-semibold transition">RU</button>
+            <button onclick="setLang('en')" id="btn-en" class="px-3 py-1 rounded bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600">EN</button>
+        </div>
+    </div>
+
+    <!-- Main Calculator Card -->
+    <div class="w-full max-w-2xl card rounded-xl shadow-2xl p-6 space-y-6">
+        
+        <!-- Rod Selection -->
+        <div>
+            <label id="label-rod" class="block text-sm font-medium text-slate-400 mb-2">Выберите удилище</label>
+            <select id="rod-select" class="select-box w-full rounded-lg p-3" onchange="calculate()">
+                <option value="" data-ru="-- Выберите удилище --" data-en="-- Select a rod --">-- Выберите удилище --</option>
+                <!-- Data populated by JS -->
+            </select>
+        </div>
+
+        <!-- Line/Leader Selection -->
+        <div>
+            <label id="label-line" class="block text-sm font-medium text-slate-400 mb-2">Выберите леску или поводок</label>
+            <select id="line-select" class="select-box w-full rounded-lg p-3" onchange="calculate()">
+                <option value="" data-ru="-- Выберите леску/поводок --" data-en="-- Select line/leader --">-- Выберите леску/поводок --</option>
+                <!-- Data populated by JS -->
+            </select>
+            <p id="line-tip" class="text-xs text-yellow-500 mt-2 hidden">💡 Совет: Желательно выбирать поводок мощнее лески, это не влияет на опыт, но спасает от обрыва.</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="result-box" class="hidden border-t border-slate-700 pt-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <span id="res-drag-label" class="text-slate-400">Настройка фрикциона:</span>
+                <span id="res-drag" class="text-xl font-bold text-blue-400">--</span>
+            </div>
+            
+            <div class="flex justify-between items-center">
+                <span id="res-verdict-label" class="text-slate-400">Вердикт:</span>
+                <span id="res-verdict" class="text-lg font-bold px-3 py-1 rounded">--</span>
+            </div>
+
+            <div id="res-warning" class="text-sm text-red-400 bg-red-900/20 p-3 rounded-lg border border-red-800 hidden">
+                ⚠️ <span id="res-warning-text"></span>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-8 text-slate-500 text-sm">
+        <span id="footer-text">Данные основаны на таблице "Сборка удочки по мощности"</span>
+    </footer>
+
+    <script>
+        // --- 1. Translations ---
+        const i18n = {
+            ru: {
+                labelRod: "Выберите удилище",
+                labelLine: "Выберите леску или поводок",
+                placeholderRod: "-- Выберите удилище --",
+                placeholderLine: "-- Выберите леску/поводок --",
+                dragLabel: "Настройка фрикциона:",
+                verdictLabel: "Вердикт:",
+                footer: "Данные основаны на таблице «Сборка удочки по мощности»",
+                lineTip: "💡 Совет: Желательно выбирать поводок мощнее лески. Это не влияет на опыт, но спасает снасть от обрыва.",
+                warningStrong: "Выбирая катушку с большей мощностью фрикциона для указанного зажатия, вы рискуете быстро испортить удилище или порвать леску.",
+                verdictExcellent: "🟢 Отличная катушка",
+                verdictGood: "🔵 Хорошая катушка",
+                verdictStrong: "🟡 Сильная катушка (Риск!)",
+                verdictWeak: "🔴 Слабая катушка (Риск обрыва!)"
+            },
+            en: {
+                labelRod: "Select a rod",
+                labelLine: "Select line or leader",
+                placeholderRod: "-- Select a rod --",
+                placeholderLine: "-- Select line/leader --",
+                dragLabel: "Drag setting:",
+                verdictLabel: "Verdict:",
+                footer: "Data based on the 'Rod assembly by power' table",
+                lineTip: "💡 Tip: It is advisable to choose a leader stronger than the main line. It doesn't affect XP but saves your gear from breaking.",
+                warningStrong: "Choosing a reel with a higher drag power for the specified setting risks quickly damaging the rod or breaking the line.",
+                verdictExcellent: "🟢 Excellent reel",
+                verdictGood: "🔵 Good reel",
+                verdictStrong: "🟡 Strong reel (Risk!)",
+                verdictWeak: "🔴 Weak reel (Break risk!)"
+            }
+        };
+
+        let currentLang = 'ru';
+
+        // --- 2. Sample Data (Extracted from your Excel) ---
+        // В будущем мы загрузим сюда полный JSON из твоего файла
+        const rods = [
+            { id: 1, nameRu: "Спиннинг 2.0м (Нагрузка: 4.0 кг)", nameEn: "Spinning Rod 2.0m (Power: 4.0 kg)", power: 4.0 },
+            { id: 2, nameRu: "Спиннинг 2.4м (Нагрузка: 4.33 кг)", nameEn: "Spinning Rod 2.4m (Power: 4.33 kg)", power: 4.33 },
+            { id: 3, nameRu: "Спиннинг 2.5м (Нагрузка: 4.5 кг)", nameEn: "Spinning Rod 2.5m (Power: 4.5 kg)", power: 4.5 },
+            { id: 4, nameRu: "Спиннинг 2.7м (Нагрузка: 4.75 кг)", nameEn: "Spinning Rod 2.7m (Power: 4.75 kg)", power: 4.75 },
+            { id: 5, nameRu: "Фидер 3.6м (Нагрузка: 5.5 кг)", nameEn: "Feeder Rod 3.6m (Power: 5.5 kg)", power: 5.5 }
+        ];
+
+        const lines = [
+            { id: 1, nameRu: "Монофил 1.4 кг", nameEn: "Monofilament 1.4 kg", power: 1.4, isLeader: false },
+            { id: 2, nameRu: "Флюорокарбон 3.6 кг (Поводок)", nameEn: "Fluorocarbon 3.6 kg (Leader)", power: 3.6, isLeader: true },
+            { id: 3, nameRu: "Шнур 4.95 кг", nameEn: "Braid 4.95 kg", power: 4.95, isLeader: false },
+            { id: 4, nameRu: "Шнур 5.20 кг", nameEn: "Braid 5.20 kg", power: 5.20, isLeader: false },
+            { id: 5, nameRu: "Титановый поводок 5.0 кг", nameEn: "Titanium Leader 5.0 kg", power: 5.0, isLeader: true }
+        ];
+
+        // --- 3. Logic Engine ---
+        function calculate() {
+            const rodId = document.getElementById('rod-select').value;
+            const lineId = document.getElementById('line-select').value;
+            const resultBox = document.getElementById('result-box');
+            const lineTip = document.getElementById('line-tip');
+            const warningBox = document.getElementById('res-warning');
+
+            if (!rodId || !lineId) {
+                resultBox.classList.add('hidden');
+                lineTip.classList.add('hidden');
+                return;
+            }
+
+            const rod = rods.find(r => r.id == rodId);
+            const line = lines.find(l => l.id == lineId);
+
+            // Show tip if leader is selected
+            if (line.isLeader) {
+                lineTip.classList.remove('hidden');
+                lineTip.textContent = i18n[currentLang].lineTip;
+            } else {
+                lineTip.classList.add('hidden');
+            }
+
+            // Balance Logic (Based on your table patterns)
+            let dragSetting = "";
+            let verdict = "";
+            let verdictClass = "";
+            let showWarning = false;
+
+            const ratio = line.power / rod.power;
+
+            // Эвристика на основе данных из твоей таблицы:
+            if (ratio >= 0.95 && ratio <= 1.05) {
+                dragSetting = currentLang === 'ru' ? "на 7/8 или 11/12" : "at 7/8 or 11/12";
+                verdict = i18n[currentLang].verdictExcellent;
+                verdictClass = "bg-green-900/40 text-green-400 border border-green-700";
+            } else if (ratio > 1.05 && ratio <= 1.15) {
+                dragSetting = currentLang === 'ru' ? "на 5/6 или 10/12" : "at 5/6 or 10/12";
+                verdict = i18n[currentLang].verdictGood;
+                verdictClass = "bg-blue-900/40 text-blue-400 border border-blue-700";
+            } else if (ratio > 1.15) {
+                dragSetting = currentLang === 'ru' ? "на максимум" : "to the maximum";
+                verdict = i18n[currentLang].verdictStrong;
+                verdictClass = "bg-yellow-900/40 text-yellow-400 border border-yellow-700";
+                showWarning = true;
+            } else {
+                dragSetting = currentLang === 'ru' ? "на 3/4" : "at 3/4";
+                verdict = i18n[currentLang].verdictWeak;
+                verdictClass = "bg-red-900/40 text-red-400 border border-red-700";
+            }
+
+            // Update UI
+            document.getElementById('res-drag').textContent = dragSetting;
+            
+            const verdictEl = document.getElementById('res-verdict');
+            verdictEl.textContent = verdict;
+            verdictEl.className = `text-lg font-bold px-3 py-1 rounded ${verdictClass}`;
+
+            if (showWarning) {
+                document.getElementById('res-warning-text').textContent = i18n[currentLang].warningStrong;
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
+
+            resultBox.classList.remove('hidden');
+        }
+
+        // --- 4. Language Switcher ---
+        function setLang(lang) {
+            currentLang = lang;
+            
+            // Toggle button styles
+            document.getElementById('btn-ru').className = lang === 'ru' ? "px-3 py-1 rounded bg-blue-600 text-white font-semibold transition" : "px-3 py-1 rounded bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600";
+            document.getElementById('btn-en').className = lang === 'en' ? "px-3 py-1 rounded bg-blue-600 text-white font-semibold transition" : "px-3 py-1 rounded bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600";
+
+            // Update static text
+            document.getElementById('label-rod').textContent = i18n[lang].labelRod;
+            document.getElementById('label-line').textContent = i18n[lang].labelLine;
+            document.getElementById('res-drag-label').textContent = i18n[lang].dragLabel;
+            document.getElementById('res-verdict-label').textContent = i18n[lang].verdictLabel;
+            document.getElementById('footer-text').textContent = i18n[lang].footer;
+
+            // Update placeholders
+            document.querySelector('#rod-select option[value=""]').textContent = i18n[lang].placeholderRod;
+            document.querySelector('#line-select option[value=""]').textContent = i18n[lang].placeholderLine;
+
+            // Re-render dropdowns
+            renderDropdowns();
+            
+            // Recalculate if values are selected
+            calculate();
+        }
+
+        function renderDropdowns() {
+            const rodSelect = document.getElementById('rod-select');
+            const currentRod = rodSelect.value;
+            rodSelect.innerHTML = `<option value="">${i18n[currentLang].placeholderRod}</option>`;
+            rods.forEach(rod => {
+                const opt = document.createElement('option');
+                opt.value = rod.id;
+                opt.textContent = currentLang === 'ru' ? rod.nameRu : rod.nameEn;
+                if (rod.id == currentRod) opt.selected = true;
+                rodSelect.appendChild(opt);
+            });
+
+            const lineSelect = document.getElementById('line-select');
+            const currentLine = lineSelect.value;
+            lineSelect.innerHTML = `<option value="">${i18n[currentLang].placeholderLine}</option>`;
+            lines.forEach(line => {
+                const opt = document.createElement('option');
+                opt.value = line.id;
+                opt.textContent = currentLang === 'ru' ? line.nameRu : line.nameEn;
+                if (line.id == currentLine) opt.selected = true;
+                lineSelect.appendChild(opt);
+            });
+        }
+
+        // Initialize
+        renderDropdowns();
+    </script>
+</body>
+</html>
