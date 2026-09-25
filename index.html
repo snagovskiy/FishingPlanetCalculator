@@ -6,515 +6,800 @@
     <title>Fishing Planet Gear Balancer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; }
-        .card { background-color: #1e293b; border: 1px solid #334155; }
-        .select-box { background-color: #334155; color: white; border: 1px solid #475569; }
-        .select-box:focus { outline: none; border-color: #3b82f6; ring: 2px solid #3b82f6; }
-        .reel-list { max-height: 200px; overflow-y: auto; }
-        .reel-item { padding: 8px; border-bottom: 1px solid #334155; cursor: pointer; transition: background-color 0.2s; }
-        .reel-item:hover { background-color: #334155; }
-        .reel-item.selected { background-color: #1e40af; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); min-height: 100vh; }
+        .card { background-color: rgba(30, 41, 59, 0.9); backdrop-filter: blur(10px); border: 1px solid #334155; }
+        .select-box { background-color: #334155; color: white; border: 1px solid #475569; transition: all 0.2s; }
+        .select-box:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+        .reel-item { transition: all 0.2s; cursor: pointer; }
+        .reel-item:hover { transform: translateX(4px); }
+        .verdict-excellent { background: rgba(34, 197, 94, 0.15); border-color: #22c55e; color: #86efac; }
+        .verdict-good { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #93c5fd; }
+        .verdict-strong { background: rgba(234, 179, 8, 0.15); border-color: #eab308; color: #fde047; }
+        .verdict-weak { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5; }
+        .filter-btn { transition: all 0.2s; }
+        .filter-btn.active { background-color: #3b82f6; color: white; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
-
-    <!-- Header & Language Toggle -->
-    <div class="w-full max-w-4xl flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-blue-400">🎣 FP Gear Balancer</h1>
-        <div class="flex space-x-2">
-            <button onclick="setLang('ru')" id="btn-ru" class="px-3 py-1 rounded bg-blue-600 text-white font-semibold transition">RU</button>
-            <button onclick="setLang('en')" id="btn-en" class="px-3 py-1 rounded bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600">EN</button>
+<body class="p-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-400">🎣 FP Gear Balancer</h1>
+                <p class="text-slate-400 text-sm mt-1" id="subtitle">Калькулятор баланса снастей</p>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="setLang('ru')" id="btn-ru" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold transition hover:bg-blue-700">RU</button>
+                <button onclick="setLang('en')" id="btn-en" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600">EN</button>
+            </div>
         </div>
+
+        <!-- Player Level Filter -->
+        <div class="card rounded-xl p-4 mb-4">
+            <label class="block text-sm font-medium text-slate-400 mb-2" id="label-level">Уровень игрока (фильтр)</label>
+            <input type="range" id="level-filter" min="1" max="70" value="70" class="w-full accent-blue-500" oninput="updateLevelDisplay(); filterData();">
+            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                <span>1</span>
+                <span id="level-display" class="text-blue-400 font-bold text-sm">70</span>
+                <span>70</span>
+            </div>
+        </div>
+
+        <!-- Main Calculator -->
+        <div class="card rounded-xl p-6 space-y-6">
+            <!-- Rod Type Filter -->
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2" id="label-rod-type">Тип удилища</label>
+                <div class="flex flex-wrap gap-2" id="rod-type-filters">
+                    <button onclick="setRodType('all')" class="filter-btn active px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="all">Все</button>
+                    <button onclick="setRodType('spinning')" class="filter-btn px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="spinning">Спиннинг</button>
+                    <button onclick="setRodType('casting')" class="filter-btn px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="casting">Кастинг</button>
+                    <button onclick="setRodType('feeder')" class="filter-btn px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="feeder">Фидер</button>
+                    <button onclick="setRodType('match')" class="filter-btn px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="match">Матч</button>
+                    <button onclick="setRodType('telescopic')" class="filter-btn px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="telescopic">Телескоп</button>
+                    <button onclick="setRodType('carp')" class="filter-btn px-3 py-1 rounded-lg bg-slate-700 text-slate-300 text-sm" data-type="carp">Карп</button>
+                </div>
+            </div>
+
+            <!-- Rod Selection -->
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2" id="label-rod">Удилище</label>
+                <select id="rod-select" class="select-box w-full rounded-lg p-3" onchange="calculate()">
+                    <option value="">--</option>
+                </select>
+            </div>
+
+            <!-- Line Selection -->
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2" id="label-line">Леска / Поводок</label>
+                <select id="line-select" class="select-box w-full rounded-lg p-3" onchange="calculate()">
+                    <option value="">--</option>
+                </select>
+                <p id="line-tip" class="text-xs text-yellow-400 mt-2 hidden">💡 <span id="line-tip-text"></span></p>
+            </div>
+
+            <!-- Results -->
+            <div id="result-box" class="hidden border-t border-slate-700 pt-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-800/50 rounded-lg p-4">
+                        <div class="text-slate-400 text-sm mb-1" id="res-drag-label">Настройка фрикциона:</div>
+                        <div id="res-drag" class="text-2xl font-bold text-blue-400">--</div>
+                    </div>
+                    <div class="bg-slate-800/50 rounded-lg p-4">
+                        <div class="text-slate-400 text-sm mb-1" id="res-max-label">Макс. мощность катушки:</div>
+                        <div id="res-max" class="text-2xl font-bold text-green-400">--</div>
+                    </div>
+                </div>
+
+                <div id="res-warning" class="text-sm text-red-400 bg-red-900/20 p-3 rounded-lg border border-red-800 hidden">
+                    ⚠️ <span id="res-warning-text"></span>
+                </div>
+
+                <!-- Reel Recommendations -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-semibold text-slate-300" id="res-reels-label">Подходящие катушки:</h3>
+                        <span id="reel-count" class="text-sm text-slate-500"></span>
+                    </div>
+                    <div id="reel-list" class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        <!-- Reels will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-6 text-center text-slate-500 text-sm">
+            <p id="footer-text">Данные основаны на таблице «Сборка удочки по мощности»</p>
+        </footer>
     </div>
-
-    <!-- Main Calculator Card -->
-    <div class="w-full max-w-4xl card rounded-xl shadow-2xl p-6 space-y-6">
-        
-        <!-- Rod Selection -->
-        <div>
-            <label id="label-rod" class="block text-sm font-medium text-slate-400 mb-2">Выберите удилище</label>
-            <select id="rod-select" class="select-box w-full rounded-lg p-3" onchange="calculate()">
-                <option value="" data-ru="-- Выберите удилище --" data-en="-- Select a rod --">-- Выберите удилище --</option>
-            </select>
-        </div>
-
-        <!-- Line/Leader Selection -->
-        <div>
-            <label id="label-line" class="block text-sm font-medium text-slate-400 mb-2">Выберите леску или поводок</label>
-            <select id="line-select" class="select-box w-full rounded-lg p-3" onchange="calculate()">
-                <option value="" data-ru="-- Выберите леску/поводок --" data-en="-- Select line/leader --">-- Выберите леску/поводок --</option>
-            </select>
-            <p id="line-tip" class="text-xs text-yellow-500 mt-2 hidden">💡 Совет: Желательно выбирать поводок мощнее лески, это не влияет на опыт, но спасает снасть от обрыва.</p>
-        </div>
-
-        <!-- Reel Selection or Recommendation -->
-        <div>
-            <label id="label-reel" class="block text-sm font-medium text-slate-400 mb-2">Выберите катушку или посмотрите рекомендации</label>
-            <select id="reel-select" class="select-box w-full rounded-lg p-3 mb-3" onchange="calculate()">
-                <option value="" data-ru="-- Выберите катушку (необязательно) --" data-en="-- Select reel (optional) --">-- Выберите катушку (необязательно) --</option>
-            </select>
-            
-            <div id="reel-recommendations" class="hidden">
-                <p id="rec-title" class="text-sm font-medium text-slate-300 mb-2">Рекомендуемые катушки:</p>
-                <div id="rec-list" class="reel-list border border-slate-700 rounded-lg bg-slate-800/50"></div>
-            </div>
-        </div>
-
-        <!-- Results Section -->
-        <div id="result-box" class="hidden border-t border-slate-700 pt-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <span id="res-drag-label" class="text-slate-400">Настройка фрикциона:</span>
-                <span id="res-drag" class="text-xl font-bold text-blue-400">--</span>
-            </div>
-            
-            <div class="flex justify-between items-center">
-                <span id="res-verdict-label" class="text-slate-400">Вердикт:</span>
-                <span id="res-verdict" class="text-lg font-bold px-3 py-1 rounded">--</span>
-            </div>
-
-            <div id="res-warning" class="text-sm text-red-400 bg-red-900/20 p-3 rounded-lg border border-red-800 hidden">
-                ️ <span id="res-warning-text"></span>
-            </div>
-        </div>
-    </div>
-
-    <footer class="mt-8 text-slate-500 text-sm">
-        <span id="footer-text">Данные основаны на таблице "Сборка удочки по мощности"</span>
-    </footer>
 
     <script>
-        // --- 1. Translations ---
+        // ==================== TRANSLATIONS ====================
         const i18n = {
             ru: {
-                labelRod: "Выберите удилище",
-                labelLine: "Выберите леску или поводок",
-                labelReel: "Выберите катушку или посмотрите рекомендации",
+                subtitle: "Калькулятор баланса снастей",
+                labelLevel: "Уровень игрока (фильтр)",
+                labelRodType: "Тип удилища",
+                labelRod: "Удилище",
+                labelLine: "Леска / Поводок",
                 placeholderRod: "-- Выберите удилище --",
                 placeholderLine: "-- Выберите леску/поводок --",
-                placeholderReel: "-- Выберите катушку (необязательно) --",
+                lineTip: "Поводок мощнее лески — это не влияет на опыт, но спасает снасть от обрыва.",
                 dragLabel: "Настройка фрикциона:",
-                verdictLabel: "Вердикт:",
+                maxLabel: "Макс. мощность катушки:",
+                reelsLabel: "Подходящие катушки:",
                 footer: "Данные основаны на таблице «Сборка удочки по мощности»",
-                lineTip: "💡 Совет: Желательно выбирать поводок мощнее лески. Это не влияет на опыт, но спасает снасть от обрыва.",
-                warningStrong: "Выбирая катушку с большей мощностью фрикциона для указанного зажатия, вы рискуете быстро испортить удилище или порвать леску.",
-                recTitle: "Рекомендуемые катушки:",
-                verdictExcellent: "🟢 Отличная катушка",
-                verdictGood: "🔵 Хорошая катушка",
-                verdictStrong: "🟡 Сильная катушка (Риск!)",
-                verdictWeak: "🔴 Слабая катушка (Риск обрыва!)"
+                warningStrong: "Катушка с большей мощностью фрикциона будет быстро портить удилище или рвёт леску.",
+                warningWeak: "Катушка слишком слабая — высокий риск обрыва!",
+                verdictExcellent: "🟢 Отличная",
+                verdictGood: "🔵 Хорошая",
+                verdictStrong: "🟡 Сильная (риск!)",
+                verdictWeak: "🔴 Слабая (обрыв!)",
+                rodTypes: { all: "Все", spinning: "Спиннинг", casting: "Кастинг", feeder: "Фидер", match: "Матч", telescopic: "Телескоп", carp: "Карп" },
+                rodTypeNames: { spinning: "Спиннинг", casting: "Кастинг", feeder: "Фидер", match: "Матч", telescopic: "Телескоп", carp: "Карп", spod: "Спод", boat: "Лодочное" },
+                reelTypeNames: { spinning: "Безынерц.", casting: "Мультипл." },
+                lineTypeNames: { mono: "Монофил", fluoro: "Флюорокарбон", braid: "Шнур", titanium: "Титан", carp: "Карповый" },
+                kg: "кг",
+                m: "м",
+                g: "г",
+                level: "ур."
             },
             en: {
-                labelRod: "Select a rod",
-                labelLine: "Select line or leader",
-                labelReel: "Select a reel or see recommendations",
+                subtitle: "Gear Balance Calculator",
+                labelLevel: "Player level (filter)",
+                labelRodType: "Rod type",
+                labelRod: "Rod",
+                labelLine: "Line / Leader",
                 placeholderRod: "-- Select a rod --",
                 placeholderLine: "-- Select line/leader --",
-                placeholderReel: "-- Select reel (optional) --",
+                lineTip: "A leader stronger than the main line doesn't affect XP but saves your gear from breaking.",
                 dragLabel: "Drag setting:",
-                verdictLabel: "Verdict:",
+                maxLabel: "Max reel power:",
+                reelsLabel: "Suitable reels:",
                 footer: "Data based on the 'Rod assembly by power' table",
-                lineTip: "💡 Tip: It is advisable to choose a leader stronger than the main line. It doesn't affect XP but saves your gear from breaking.",
-                warningStrong: "Choosing a reel with a higher drag power for the specified setting risks quickly damaging the rod or breaking the line.",
-                recTitle: "Recommended reels:",
-                verdictExcellent: " Excellent reel",
-                verdictGood: " Good reel",
-                verdictStrong: " Strong reel (Risk!)",
-                verdictWeak: "🔴 Weak reel (Break risk!)"
+                warningStrong: "A reel with higher drag power will quickly damage the rod or break the line.",
+                warningWeak: "Reel is too weak — high break risk!",
+                verdictExcellent: "🟢 Excellent",
+                verdictGood: " Good",
+                verdictStrong: " Strong (risk!)",
+                verdictWeak: "🔴 Weak (break!)",
+                rodTypes: { all: "All", spinning: "Spinning", casting: "Casting", feeder: "Feeder", match: "Match", telescopic: "Telescopic", carp: "Carp" },
+                rodTypeNames: { spinning: "Spinning", casting: "Casting", feeder: "Feeder", match: "Match", telescopic: "Telescopic", carp: "Carp", spod: "Spod", boat: "Boat" },
+                reelTypeNames: { spinning: "Spinning", casting: "Baitcasting" },
+                lineTypeNames: { mono: "Monofilament", fluoro: "Fluorocarbon", braid: "Braid", titanium: "Titanium", carp: "Carp" },
+                kg: "kg",
+                m: "m",
+                g: "g",
+                level: "lvl"
             }
         };
 
         let currentLang = 'ru';
+        let currentRodType = 'all';
 
-        // --- 2. Full Data from Excel ---
-        // Удилища (Spinning, Casting, Feeder, etc.)
+        // ==================== DATA ====================
         const rods = [
-            // Spinning
-            { id: 1, type: 'spinning', nameRu: "Спиннинг 1.9м (3.0 кг)", nameEn: "Spinning 1.9m (3.0 kg)", power: 3.0 },
-            { id: 2, type: 'spinning', nameRu: "Спиннинг 2.0м (3.2 кг)", nameEn: "Spinning 2.0m (3.2 kg)", power: 3.2 },
-            { id: 3, type: 'spinning', nameRu: "Спиннинг 2.3м (3.4 кг)", nameEn: "Spinning 2.3m (3.4 kg)", power: 3.4 },
-            { id: 4, type: 'spinning', nameRu: "Спиннинг 2.4м (3.4 кг)", nameEn: "Spinning 2.4m (3.4 kg)", power: 3.4 },
-            { id: 5, type: 'spinning', nameRu: "Спиннинг 1.9м (4.0 кг)", nameEn: "Spinning 1.9m (4.0 kg)", power: 4.0 },
-            { id: 6, type: 'spinning', nameRu: "Спиннинг 2.6м (3.5 кг)", nameEn: "Spinning 2.6m (3.5 kg)", power: 3.5 },
-            { id: 7, type: 'spinning', nameRu: "Спиннинг 2.0м (4.0 кг)", nameEn: "Spinning 2.0m (4.0 kg)", power: 4.0 },
-            { id: 8, type: 'spinning', nameRu: "Спиннинг 2.15м (4.0 кг)", nameEn: "Spinning 2.15m (4.0 kg)", power: 4.0 },
-            { id: 9, type: 'spinning', nameRu: "Спиннинг 1.9м (4.5 кг)", nameEn: "Spinning 1.9m (4.5 kg)", power: 4.5 },
-            { id: 10, type: 'spinning', nameRu: "Спиннинг 2.3м (4.5 кг)", nameEn: "Spinning 2.3m (4.5 kg)", power: 4.5 },
-            { id: 11, type: 'spinning', nameRu: "Спиннинг 2.5м (4.5 кг)", nameEn: "Spinning 2.5m (4.5 kg)", power: 4.5 },
-            { id: 12, type: 'spinning', nameRu: "Спиннинг 2.0м (5.0 кг)", nameEn: "Spinning 2.0m (5.0 kg)", power: 5.0 },
-            { id: 13, type: 'spinning', nameRu: "Спиннинг 2.4м (5.5 кг)", nameEn: "Spinning 2.4m (5.5 kg)", power: 5.5 },
-            { id: 14, type: 'spinning', nameRu: "Спиннинг 2.7м (6.0 кг)", nameEn: "Spinning 2.7m (6.0 kg)", power: 6.0 },
-            { id: 15, type: 'spinning', nameRu: "Спиннинг 2.1м (7.5 кг)", nameEn: "Spinning 2.1m (7.5 kg)", power: 7.5 },
-            { id: 16, type: 'spinning', nameRu: "Спиннинг 2.4м (8.5 кг)", nameEn: "Spinning 2.4m (8.5 kg)", power: 8.5 },
-            // Casting
-            { id: 17, type: 'casting', nameRu: "Кастинг 1.25м (4.0 кг)", nameEn: "Casting 1.25m (4.0 kg)", power: 4.0 },
-            { id: 18, type: 'casting', nameRu: "Кастинг 2.0м (4.0 кг)", nameEn: "Casting 2.0m (4.0 kg)", power: 4.0 },
-            { id: 19, type: 'casting', nameRu: "Кастинг 1.7м (5.2 кг)", nameEn: "Casting 1.7m (5.2 kg)", power: 5.2 },
-            { id: 20, type: 'casting', nameRu: "Кастинг 1.9м (5.2 кг)", nameEn: "Casting 1.9m (5.2 kg)", power: 5.2 },
-            { id: 21, type: 'casting', nameRu: "Кастинг 2.1м (5.2 кг)", nameEn: "Casting 2.1m (5.2 kg)", power: 5.2 },
-            { id: 22, type: 'casting', nameRu: "Кастинг 1.6м (6.0 кг)", nameEn: "Casting 1.6m (6.0 kg)", power: 6.0 },
-            { id: 23, type: 'casting', nameRu: "Кастинг 1.8м (7.0 кг)", nameEn: "Casting 1.8m (7.0 kg)", power: 7.0 },
-            { id: 24, type: 'casting', nameRu: "Кастинг 1.9м (7.5 кг)", nameEn: "Casting 1.9m (7.5 kg)", power: 7.5 },
-            { id: 25, type: 'casting', nameRu: "Кастинг 2.0м (8.0 кг)", nameEn: "Casting 2.0m (8.0 kg)", power: 8.0 },
-            // Feeder
-            { id: 26, type: 'feeder', nameRu: "Фидер 2.4м (3.0 кг)", nameEn: "Feeder 2.4m (3.0 kg)", power: 3.0 },
-            { id: 27, type: 'feeder', nameRu: "Фидер 2.7м (3.25 кг)", nameEn: "Feeder 2.7m (3.25 kg)", power: 3.25 },
-            { id: 28, type: 'feeder', nameRu: "Фидер 3.0м (3.5 кг)", nameEn: "Feeder 3.0m (3.5 kg)", power: 3.5 },
-            { id: 29, type: 'feeder', nameRu: "Фидер 3.3м (4.0 кг)", nameEn: "Feeder 3.3m (4.0 kg)", power: 4.0 },
-            { id: 30, type: 'feeder', nameRu: "Фидер 3.6м (4.5 кг)", nameEn: "Feeder 3.6m (4.5 kg)", power: 4.5 },
-            { id: 31, type: 'feeder', nameRu: "Фидер 3.9м (5.0 кг)", nameEn: "Feeder 3.9m (5.0 kg)", power: 5.0 },
-            { id: 32, type: 'feeder', nameRu: "Фидер 3.4м (6.0 кг)", nameEn: "Feeder 3.4m (6.0 kg)", power: 6.0 },
-            { id: 33, type: 'feeder', nameRu: "Фидер 3.7м (6.0 кг)", nameEn: "Feeder 3.7m (6.0 kg)", power: 6.0 },
-            { id: 34, type: 'feeder', nameRu: "Фидер 4.0м (6.5 кг)", nameEn: "Feeder 4.0m (6.5 kg)", power: 6.5 },
-            { id: 35, type: 'feeder', nameRu: "Фидер 3.9м (8.0 кг)", nameEn: "Feeder 3.9m (8.0 kg)", power: 8.0 },
-            { id: 36, type: 'feeder', nameRu: "Фидер 4.2м (8.5 кг)", nameEn: "Feeder 4.2m (8.5 kg)", power: 8.5 },
-            // Match
-            { id: 37, type: 'match', nameRu: "Матчевое 3.5м (3.0 кг)", nameEn: "Match 3.5m (3.0 kg)", power: 3.0 },
-            { id: 38, type: 'match', nameRu: "Матчевое 4.5м (3.5 кг)", nameEn: "Match 4.5m (3.5 kg)", power: 3.5 },
-            { id: 39, type: 'match', nameRu: "Матчевое 3.3м (5.0 кг)", nameEn: "Match 3.3m (5.0 kg)", power: 5.0 },
-            { id: 40, type: 'match', nameRu: "Матчевое 3.9м (5.5 кг)", nameEn: "Match 3.9m (5.5 kg)", power: 5.5 },
-            { id: 41, type: 'match', nameRu: "Матчевое 4.5м (6.0 кг)", nameEn: "Match 4.5m (6.0 kg)", power: 6.0 },
-            { id: 42, type: 'match', nameRu: "Матчевое 3.5м (8.0 кг)", nameEn: "Match 3.5m (8.0 kg)", power: 8.0 },
-            { id: 43, type: 'match', nameRu: "Матчевое 3.9м (9.0 кг)", nameEn: "Match 3.9m (9.0 kg)", power: 9.0 },
-            // Telescopic
-            { id: 44, type: 'telescopic', nameRu: "Телескоп 4.5м (1.82 кг)", nameEn: "Telescopic 4.5m (1.82 kg)", power: 1.82 },
-            { id: 45, type: 'telescopic', nameRu: "Телескоп 6.5м (2.67 кг)", nameEn: "Telescopic 6.5m (2.67 kg)", power: 2.67 },
-            { id: 46, type: 'telescopic', nameRu: "Телескоп 5.0м (4.0 кг)", nameEn: "Telescopic 5.0m (4.0 kg)", power: 4.0 },
-            { id: 47, type: 'telescopic', nameRu: "Телескоп 7.0м (4.5 кг)", nameEn: "Telescopic 7.0m (4.5 kg)", power: 4.5 },
-            { id: 48, type: 'telescopic', nameRu: "Телескоп 5.0м (5.0 кг)", nameEn: "Telescopic 5.0m (5.0 kg)", power: 5.0 },
-            { id: 49, type: 'telescopic', nameRu: "Телескоп 6.0м (5.0 кг)", nameEn: "Telescopic 6.0m (5.0 kg)", power: 5.0 }
+            // Спиннинги
+            {id:1,level:3,nameRu:"Спиннинг 1.9м 3.0кг",nameEn:"Spinning 1.9m 3.0kg",power:3.0,test:"5-18",length:1.9,price:1250,type:"spinning"},
+            {id:2,level:4,nameRu:"Спиннинг 2.0м 3.2кг",nameEn:"Spinning 2.0m 3.2kg",power:3.2,test:"2-9",length:2.0,price:1700,type:"spinning"},
+            {id:3,level:5,nameRu:"Спиннинг 2.3м 3.4кг",nameEn:"Spinning 2.3m 3.4kg",power:3.4,test:"7-20",length:2.3,price:1800,type:"spinning"},
+            {id:4,level:6,nameRu:"Спиннинг 2.4м 3.4кг",nameEn:"Spinning 2.4m 3.4kg",power:3.4,test:"5-12",length:2.4,price:1850,type:"spinning"},
+            {id:5,level:7,nameRu:"Спиннинг 1.9м 4.0кг",nameEn:"Spinning 1.9m 4.0kg",power:4.0,test:"0.5-7",length:1.9,price:3000,type:"spinning"},
+            {id:6,level:8,nameRu:"Спиннинг 2.6м 3.5кг",nameEn:"Spinning 2.6m 3.5kg",power:3.5,test:"7-21",length:2.6,price:1950,type:"spinning"},
+            {id:7,level:9,nameRu:"Спиннинг 2.0м 4.0кг",nameEn:"Spinning 2.0m 4.0kg",power:4.0,test:"1-9",length:2.0,price:3200,type:"spinning"},
+            {id:8,level:11,nameRu:"Спиннинг 2.15м 4.0кг",nameEn:"Spinning 2.15m 4.0kg",power:4.0,test:"1.5-11",length:2.15,price:3500,type:"spinning"},
+            {id:9,level:12,nameRu:"Спиннинг 1.9м 4.5кг",nameEn:"Spinning 1.9m 4.5kg",power:4.5,test:"7-14",length:1.9,price:4150,type:"spinning"},
+            {id:10,level:13,nameRu:"Спиннинг 2.3м 4.5кг",nameEn:"Spinning 2.3m 4.5kg",power:4.5,test:"10-21",length:2.3,price:4300,type:"spinning"},
+            {id:11,level:14,nameRu:"Спиннинг 2.5м 4.5кг",nameEn:"Spinning 2.5m 4.5kg",power:4.5,test:"10-21",length:2.5,price:4450,type:"spinning"},
+            {id:12,level:16,nameRu:"Спиннинг 2.0м 5.0кг",nameEn:"Spinning 2.0m 5.0kg",power:5.0,test:"4-18",length:2.0,price:5000,type:"spinning"},
+            {id:13,level:18,nameRu:"Спиннинг 2.4м 5.5кг",nameEn:"Spinning 2.4m 5.5kg",power:5.5,test:"4-18",length:2.4,price:5700,type:"spinning"},
+            {id:14,level:20,nameRu:"Спиннинг 2.7м 6.0кг",nameEn:"Spinning 2.7m 6.0kg",power:6.0,test:"4-18",length:2.7,price:7500,type:"spinning"},
+            {id:15,level:22,nameRu:"Спиннинг 2.1м 7.5кг",nameEn:"Spinning 2.1m 7.5kg",power:7.5,test:"20-50",length:2.1,price:9000,type:"spinning"},
+            {id:16,level:25,nameRu:"Спиннинг 2.4м 8.5кг",nameEn:"Spinning 2.4m 8.5kg",power:8.5,test:"20-50",length:2.4,price:9300,type:"spinning"},
+            {id:17,level:27,nameRu:"Спиннинг 2.9м 9.5кг",nameEn:"Spinning 2.9m 9.5kg",power:9.5,test:"20-50",length:2.9,price:9500,type:"spinning"},
+            {id:18,level:30,nameRu:"Спиннинг 2.0м 10.5кг",nameEn:"Spinning 2.0m 10.5kg",power:10.5,test:"20-65",length:2.0,price:12000,type:"spinning"},
+            {id:19,level:34,nameRu:"Спиннинг 2.7м 12.0кг",nameEn:"Spinning 2.7m 12.0kg",power:12.0,test:"25-70",length:2.7,price:15600,type:"spinning"},
+            {id:20,level:38,nameRu:"Спиннинг 2.2м 19.5кг",nameEn:"Spinning 2.2m 19.5kg",power:19.5,test:"18-56",length:2.2,price:26000,type:"spinning"},
+            {id:21,level:46,nameRu:"Спиннинг 2.3м 27.5кг",nameEn:"Spinning 2.3m 27.5kg",power:27.5,test:"18-56",length:2.3,price:40000,type:"spinning"},
+            {id:22,level:50,nameRu:"Спиннинг 2.5м 25.0кг",nameEn:"Spinning 2.5m 25.0kg",power:25.0,test:"14-49",length:2.5,price:40500,type:"spinning"},
+            {id:23,level:52,nameRu:"Спиннинг 2.0м 30.5кг",nameEn:"Spinning 2.0m 30.5kg",power:30.5,test:"21-63",length:2.0,price:47900,type:"spinning"},
+            {id:24,level:55,nameRu:"Спиннинг 1.9м 31.0кг",nameEn:"Spinning 1.9m 31.0kg",power:31.0,test:"40-70",length:1.9,price:45000,type:"spinning"},
+            {id:25,level:59,nameRu:"Спиннинг 2.1м 34.5кг",nameEn:"Spinning 2.1m 34.5kg",power:34.5,test:"60-100",length:2.1,price:50120,type:"spinning"},
+            // Кастинги
+            {id:100,level:6,nameRu:"Кастинг 1.6м 4.0кг",nameEn:"Casting 1.6m 4.0kg",power:4.0,test:"7-25",length:1.6,price:2000,type:"casting"},
+            {id:101,level:8,nameRu:"Кастинг 2.0м 4.0кг",nameEn:"Casting 2.0m 4.0kg",power:4.0,test:"7-25",length:2.0,price:2450,type:"casting"},
+            {id:102,level:11,nameRu:"Кастинг 1.7м 5.2кг",nameEn:"Casting 1.7m 5.2kg",power:5.2,test:"7-21",length:1.7,price:4300,type:"casting"},
+            {id:103,level:14,nameRu:"Кастинг 1.9м 5.2кг",nameEn:"Casting 1.9m 5.2kg",power:5.2,test:"7-25",length:1.9,price:4550,type:"casting"},
+            {id:104,level:16,nameRu:"Кастинг 2.1м 5.2кг",nameEn:"Casting 2.1m 5.2kg",power:5.2,test:"10-30",length:2.1,price:4650,type:"casting"},
+            {id:105,level:18,nameRu:"Кастинг 1.6м 6.0кг",nameEn:"Casting 1.6m 6.0kg",power:6.0,test:"9-28",length:1.6,price:6500,type:"casting"},
+            {id:106,level:19,nameRu:"Кастинг 1.9м 6.0кг",nameEn:"Casting 1.9m 6.0kg",power:6.0,test:"9-28",length:1.9,price:6750,type:"casting"},
+            {id:107,level:22,nameRu:"Кастинг 1.9м 7.0кг",nameEn:"Casting 1.9m 7.0kg",power:7.0,test:"14-42",length:1.9,price:8300,type:"casting"},
+            {id:108,level:23,nameRu:"Кастинг 2.3м 7.5кг",nameEn:"Casting 2.3m 7.5kg",power:7.5,test:"14-42",length:2.3,price:8500,type:"casting"},
+            {id:109,level:25,nameRu:"Кастинг 2.6м 8.0кг",nameEn:"Casting 2.6m 8.0kg",power:8.0,test:"14-42",length:2.6,price:8800,type:"casting"},
+            {id:110,level:26,nameRu:"Кастинг 2.0м 10.0кг",nameEn:"Casting 2.0m 10.0kg",power:10.0,test:"10-40",length:2.0,price:12000,type:"casting"},
+            {id:111,level:28,nameRu:"Кастинг 2.2м 10.5кг",nameEn:"Casting 2.2m 10.5kg",power:10.5,test:"10-40",length:2.2,price:12300,type:"casting"},
+            {id:112,level:30,nameRu:"Кастинг 2.4м 11.0кг",nameEn:"Casting 2.4m 11.0kg",power:11.0,test:"14-45",length:2.4,price:14000,type:"casting"},
+            {id:113,level:32,nameRu:"Кастинг 2.6м 13.0кг",nameEn:"Casting 2.6m 13.0kg",power:13.0,test:"21-60",length:2.6,price:20400,type:"casting"},
+            {id:114,level:34,nameRu:"Кастинг 1.4м 14.0кг",nameEn:"Casting 1.4m 14.0kg",power:14.0,test:"25-70",length:1.4,price:22550,type:"casting"},
+            {id:115,level:36,nameRu:"Кастинг 1.8м 16.0кг",nameEn:"Casting 1.8m 16.0kg",power:16.0,test:"25-70",length:1.8,price:27100,type:"casting"},
+            {id:116,level:39,nameRu:"Кастинг 1.6м 22.0кг",nameEn:"Casting 1.6m 22.0kg",power:22.0,test:"28-85",length:1.6,price:33000,type:"casting"},
+            {id:117,level:40,nameRu:"Кастинг 2.2м 25.0кг",nameEn:"Casting 2.2m 25.0kg",power:25.0,test:"28-85",length:2.2,price:36000,type:"casting"},
+            {id:118,level:46,nameRu:"Кастинг 2.8м 27.0кг",nameEn:"Casting 2.8m 27.0kg",power:27.0,test:"15-50",length:2.8,price:40000,type:"casting"},
+            {id:119,level:50,nameRu:"Кастинг 3.0м 30.0кг",nameEn:"Casting 3.0m 30.0kg",power:30.0,test:"45-100",length:3.0,price:48500,type:"casting"},
+            {id:120,level:55,nameRu:"Кастинг 2.0м 36.0кг",nameEn:"Casting 2.0m 36.0kg",power:36.0,test:"24-70",length:2.0,price:57800,type:"casting"},
+            {id:121,level:62,nameRu:"Кастинг 2.4м 38.0кг",nameEn:"Casting 2.4m 38.0kg",power:38.0,test:"24-80",length:2.4,price:63500,type:"casting"},
+            {id:122,level:70,nameRu:"Кастинг 2.2м 42.0кг",nameEn:"Casting 2.2m 42.0kg",power:42.0,test:"24-100",length:2.2,price:69770,type:"casting"},
+            // Фидеры
+            {id:200,level:3,nameRu:"Фидер 2.4м 3.0кг",nameEn:"Feeder 2.4m 3.0kg",power:3.0,test:"5-35",length:2.4,price:1940,type:"feeder"},
+            {id:201,level:5,nameRu:"Фидер 2.7м 3.25кг",nameEn:"Feeder 2.7m 3.25kg",power:3.25,test:"10-40",length:2.7,price:2020,type:"feeder"},
+            {id:202,level:7,nameRu:"Фидер 3.0м 3.5кг",nameEn:"Feeder 3.0m 3.5kg",power:3.5,test:"15-50",length:3.0,price:2150,type:"feeder"},
+            {id:203,level:12,nameRu:"Фидер 3.3м 4.0кг",nameEn:"Feeder 3.3m 4.0kg",power:4.0,test:"20-70",length:3.3,price:3360,type:"feeder"},
+            {id:204,level:14,nameRu:"Фидер 3.6м 4.5кг",nameEn:"Feeder 3.6m 4.5kg",power:4.5,test:"30-90",length:3.6,price:3410,type:"feeder"},
+            {id:205,level:16,nameRu:"Фидер 3.9м 5.0кг",nameEn:"Feeder 3.9m 5.0kg",power:5.0,test:"40-120",length:3.9,price:3650,type:"feeder"},
+            {id:206,level:19,nameRu:"Фидер 3.4м 6.0кг",nameEn:"Feeder 3.4m 6.0kg",power:6.0,test:"15-60",length:3.4,price:6430,type:"feeder"},
+            {id:207,level:20,nameRu:"Фидер 3.7м 6.0кг",nameEn:"Feeder 3.7m 6.0kg",power:6.0,test:"20-70",length:3.7,price:6650,type:"feeder"},
+            {id:208,level:21,nameRu:"Фидер 4.0м 6.5кг",nameEn:"Feeder 4.0m 6.5kg",power:6.5,test:"25-85",length:4.0,price:6800,type:"feeder"},
+            {id:209,level:23,nameRu:"Фидер 3.9м 8.0кг",nameEn:"Feeder 3.9m 8.0kg",power:8.0,test:"70-140",length:3.9,price:9000,type:"feeder"},
+            {id:210,level:25,nameRu:"Фидер 4.2м 8.5кг",nameEn:"Feeder 4.2m 8.5kg",power:8.5,test:"85-175",length:4.2,price:9400,type:"feeder"},
+            {id:211,level:27,nameRu:"Фидер 4.5м 9.0кг",nameEn:"Feeder 4.5m 9.0kg",power:9.0,test:"85-170",length:4.5,price:10700,type:"feeder"},
+            {id:212,level:36,nameRu:"Фидер 3.3м 15.0кг",nameEn:"Feeder 3.3m 15.0kg",power:15.0,test:"100-210",length:3.3,price:20100,type:"feeder"},
+            {id:213,level:38,nameRu:"Фидер 3.6м 16.0кг",nameEn:"Feeder 3.6m 16.0kg",power:16.0,test:"110-230",length:3.6,price:22350,type:"feeder"},
+            {id:214,level:44,nameRu:"Фидер 2.8м 23.0кг",nameEn:"Feeder 2.8m 23.0kg",power:23.0,test:"180-240",length:2.8,price:30800,type:"feeder"},
+            {id:215,level:50,nameRu:"Фидер 3.1м 27.0кг",nameEn:"Feeder 3.1m 27.0kg",power:27.0,test:"180-270",length:3.1,price:32700,type:"feeder"},
+            {id:216,level:63,nameRu:"Фидер 3.1м 31.0кг",nameEn:"Feeder 3.1m 31.0kg",power:31.0,test:"170-270",length:3.1,price:49390,type:"feeder"},
+            // Матчевые
+            {id:300,level:5,nameRu:"Матч 3.5м 3.0кг",nameEn:"Match 3.5m 3.0kg",power:3.0,test:"",length:3.5,price:1900,type:"match"},
+            {id:301,level:9,nameRu:"Матч 4.5м 3.5кг",nameEn:"Match 4.5m 3.5kg",power:3.5,test:"",length:4.5,price:2100,type:"match"},
+            {id:302,level:11,nameRu:"Матч 3.3м 5.0кг",nameEn:"Match 3.3m 5.0kg",power:5.0,test:"",length:3.3,price:3500,type:"match"},
+            {id:303,level:15,nameRu:"Матч 3.9м 5.5кг",nameEn:"Match 3.9m 5.5kg",power:5.5,test:"",length:3.9,price:3870,type:"match"},
+            {id:304,level:19,nameRu:"Матч 4.5м 6.0кг",nameEn:"Match 4.5m 6.0kg",power:6.0,test:"",length:4.5,price:4200,type:"match"},
+            {id:305,level:23,nameRu:"Матч 3.5м 8.0кг",nameEn:"Match 3.5m 8.0kg",power:8.0,test:"",length:3.5,price:7500,type:"match"},
+            {id:306,level:24,nameRu:"Матч 3.9м 9.0кг",nameEn:"Match 3.9m 9.0kg",power:9.0,test:"",length:3.9,price:8200,type:"match"},
+            {id:307,level:26,nameRu:"Матч 4.5м 10.0кг",nameEn:"Match 4.5m 10.0kg",power:10.0,test:"",length:4.5,price:9000,type:"match"},
+            {id:308,level:29,nameRu:"Матч 4.0м 11.5кг",nameEn:"Match 4.0m 11.5kg",power:11.5,test:"",length:4.0,price:10000,type:"match"},
+            {id:309,level:31,nameRu:"Матч 3.7м 12.5кг",nameEn:"Match 3.7m 12.5kg",power:12.5,test:"",length:3.7,price:12500,type:"match"},
+            {id:310,level:33,nameRu:"Матч 3.4м 13.5кг",nameEn:"Match 3.4m 13.5kg",power:13.5,test:"",length:3.4,price:13700,type:"match"},
+            {id:311,level:34,nameRu:"Матч 3.6м 15.0кг",nameEn:"Match 3.6m 15.0kg",power:15.0,test:"",length:3.6,price:15000,type:"match"},
+            {id:312,level:37,nameRu:"Матч 3.0м 16.0кг",nameEn:"Match 3.0m 16.0kg",power:16.0,test:"",length:3.0,price:17000,type:"match"},
+            {id:313,level:46,nameRu:"Матч 4.5м 20.5кг",nameEn:"Match 4.5m 20.5kg",power:20.5,test:"",length:4.5,price:23200,type:"match"},
+            {id:314,level:49,nameRu:"Матч 3.9м 23.0кг",nameEn:"Match 3.9m 23.0kg",power:23.0,test:"",length:3.9,price:25600,type:"match"},
+            {id:315,level:53,nameRu:"Матч 3.5м 26.0кг",nameEn:"Match 3.5m 26.0kg",power:26.0,test:"",length:3.5,price:33550,type:"match"},
+            {id:316,level:62,nameRu:"Матч 3.2м 30.3кг",nameEn:"Match 3.2m 30.3kg",power:30.3,test:"",length:3.2,price:42420,type:"match"},
+            {id:317,level:64,nameRu:"Матч 3.5м 31.5кг",nameEn:"Match 3.5m 31.5kg",power:31.5,test:"",length:3.5,price:47400,type:"match"},
+            // Телескопические
+            {id:400,level:1,nameRu:"Телескоп 4.5м 1.82кг",nameEn:"Telescopic 4.5m 1.82kg",power:1.82,test:"",length:4.5,price:1300,type:"telescopic"},
+            {id:401,level:4,nameRu:"Телескоп 6.5м 2.67кг",nameEn:"Telescopic 6.5m 2.67kg",power:2.67,test:"",length:6.5,price:1650,type:"telescopic"},
+            {id:402,level:10,nameRu:"Телескоп 5.0м 4.0кг",nameEn:"Telescopic 5.0m 4.0kg",power:4.0,test:"",length:5.0,price:2250,type:"telescopic"},
+            {id:403,level:12,nameRu:"Телескоп 7.0м 4.5кг",nameEn:"Telescopic 7.0m 4.5kg",power:4.5,test:"",length:7.0,price:2800,type:"telescopic"},
+            {id:404,level:17,nameRu:"Телескоп 5.0м 5.0кг",nameEn:"Telescopic 5.0m 5.0kg",power:5.0,test:"",length:5.0,price:3900,type:"telescopic"},
+            {id:405,level:18,nameRu:"Телескоп 6.0м 5.0кг",nameEn:"Telescopic 6.0m 5.0kg",power:5.0,test:"",length:6.0,price:4100,type:"telescopic"},
+            // Карповые
+            {id:500,level:35,nameRu:"Карповое 3.5м 15.0кг",nameEn:"Carp 3.5m 15.0kg",power:15.0,test:"65-140",length:3.5,price:35000,type:"carp"},
+            {id:501,level:37,nameRu:"Карповое 3.75м 16.0кг",nameEn:"Carp 3.75m 16.0kg",power:16.0,test:"70-155",length:3.75,price:37500,type:"carp"},
+            {id:502,level:39,nameRu:"Карповое 4.0м 17.0кг",nameEn:"Carp 4.0m 17.0kg",power:17.0,test:"75-175",length:4.0,price:40300,type:"carp"},
+            {id:503,level:42,nameRu:"Карповое 3.3м 18.5кг",nameEn:"Carp 3.3m 18.5kg",power:18.5,test:"75-170",length:3.3,price:55050,type:"carp"},
+            {id:504,level:44,nameRu:"Карповое 3.6м 20.0кг",nameEn:"Carp 3.6m 20.0kg",power:20.0,test:"80-185",length:3.6,price:57930,type:"carp"},
+            {id:505,level:45,nameRu:"Карповое 3.9м 21.5кг",nameEn:"Carp 3.9m 21.5kg",power:21.5,test:"85-190",length:3.9,price:62200,type:"carp"},
+            {id:506,level:47,nameRu:"Карповое 3.8м 22.5кг",nameEn:"Carp 3.8m 22.5kg",power:22.5,test:"90-190",length:3.8,price:69670,type:"carp"},
+            {id:507,level:49,nameRu:"Карповое 4.0м 24.5кг",nameEn:"Carp 4.0m 24.5kg",power:24.5,test:"100-200",length:4.0,price:72140,type:"carp"},
+            {id:508,level:50,nameRu:"Карповое 4.2м 26.5кг",nameEn:"Carp 4.2m 26.5kg",power:26.5,test:"110-230",length:4.2,price:77400,type:"carp"},
         ];
 
-        // Лески и поводки
-        const lines = [
-            // Monofilament
-            { id: 1, type: 'mono', nameRu: "Монофил 0.9 кг", nameEn: "Monofilament 0.9 kg", power: 0.9, isLeader: false },
-            { id: 2, type: 'mono', nameRu: "Монофил 1.4 кг", nameEn: "Monofilament 1.4 kg", power: 1.4, isLeader: false },
-            { id: 3, type: 'mono', nameRu: "Монофил 1.8 кг", nameEn: "Monofilament 1.8 kg", power: 1.8, isLeader: false },
-            { id: 4, type: 'mono', nameRu: "Монофил 2.7 кг", nameEn: "Monofilament 2.7 kg", power: 2.7, isLeader: false },
-            { id: 5, type: 'mono', nameRu: "Монофил 3.6 кг", nameEn: "Monofilament 3.6 kg", power: 3.6, isLeader: false },
-            { id: 6, type: 'mono', nameRu: "Монофил 5.4 кг", nameEn: "Monofilament 5.4 kg", power: 5.4, isLeader: false },
-            { id: 7, type: 'mono', nameRu: "Монофил 7.2 кг", nameEn: "Monofilament 7.2 kg", power: 7.2, isLeader: false },
-            { id: 8, type: 'mono', nameRu: "Монофил 9.0 кг", nameEn: "Monofilament 9.0 kg", power: 9.0, isLeader: false },
-            { id: 9, type: 'mono', nameRu: "Монофил 11.3 кг", nameEn: "Monofilament 11.3 kg", power: 11.3, isLeader: false },
-            { id: 10, type: 'mono', nameRu: "Монофил 14.5 кг", nameEn: "Monofilament 14.5 kg", power: 14.5, isLeader: false },
-            // Fluorocarbon
-            { id: 11, type: 'fluoro', nameRu: "Флюорокарбон 2.7 кг", nameEn: "Fluorocarbon 2.7 kg", power: 2.7, isLeader: false },
-            { id: 12, type: 'fluoro', nameRu: "Флюорокарбон 3.6 кг", nameEn: "Fluorocarbon 3.6 kg", power: 3.6, isLeader: false },
-            { id: 13, type: 'fluoro', nameRu: "Флюорокарбон 4.5 кг", nameEn: "Fluorocarbon 4.5 kg", power: 4.5, isLeader: false },
-            { id: 14, type: 'fluoro', nameRu: "Флюорокарбон 5.5 кг", nameEn: "Fluorocarbon 5.5 kg", power: 5.5, isLeader: false },
-            { id: 15, type: 'fluoro', nameRu: "Флюорокарбон 6.8 кг", nameEn: "Fluorocarbon 6.8 kg", power: 6.8, isLeader: false },
-            { id: 16, type: 'fluoro', nameRu: "Флюорокарбон 9.1 кг", nameEn: "Fluorocarbon 9.1 kg", power: 9.1, isLeader: false },
-            { id: 17, type: 'fluoro', nameRu: "Флюорокарбон 11.3 кг", nameEn: "Fluorocarbon 11.3 kg", power: 11.3, isLeader: false },
-            { id: 18, type: 'fluoro', nameRu: "Флюорокарбон 12.7 кг", nameEn: "Fluorocarbon 12.7 kg", power: 12.7, isLeader: false },
-            { id: 19, type: 'fluoro', nameRu: "Флюорокарбон 15.8 кг", nameEn: "Fluorocarbon 15.8 kg", power: 15.8, isLeader: false },
-            { id: 20, type: 'fluoro', nameRu: "Флюорокарбон 18.1 кг", nameEn: "Fluorocarbon 18.1 kg", power: 18.1, isLeader: false },
-            { id: 21, type: 'fluoro', nameRu: "Флюорокарбон 20.0 кг", nameEn: "Fluorocarbon 20.0 kg", power: 20.0, isLeader: false },
-            { id: 22, type: 'fluoro', nameRu: "Флюорокарбон 24.0 кг", nameEn: "Fluorocarbon 24.0 kg", power: 24.0, isLeader: false },
-            { id: 23, type: 'fluoro', nameRu: "Флюорокарбон 27.0 кг", nameEn: "Fluorocarbon 27.0 kg", power: 27.0, isLeader: false },
-            { id: 24, type: 'fluoro', nameRu: "Флюорокарбон 27.5 кг", nameEn: "Fluorocarbon 27.5 kg", power: 27.5, isLeader: false },
-            { id: 25, type: 'fluoro', nameRu: "Флюорокарбон 29.0 кг", nameEn: "Fluorocarbon 29.0 kg", power: 29.0, isLeader: false },
-            { id: 26, type: 'fluoro', nameRu: "Флюорокарбон 33.2 кг", nameEn: "Fluorocarbon 33.2 kg", power: 33.2, isLeader: false },
-            // Braid
-            { id: 27, type: 'braid', nameRu: "Шнур 1.8 кг", nameEn: "Braid 1.8 kg", power: 1.8, isLeader: false },
-            { id: 28, type: 'braid', nameRu: "Шнур 2.5 кг", nameEn: "Braid 2.5 kg", power: 2.5, isLeader: false },
-            { id: 29, type: 'braid', nameRu: "Шнур 2.7 кг", nameEn: "Braid 2.7 kg", power: 2.7, isLeader: false },
-            { id: 30, type: 'braid', nameRu: "Шнур 3.5 кг", nameEn: "Braid 3.5 kg", power: 3.5, isLeader: false },
-            { id: 31, type: 'braid', nameRu: "Шнур 3.6 кг", nameEn: "Braid 3.6 kg", power: 3.6, isLeader: false },
-            { id: 32, type: 'braid', nameRu: "Шнур 4.5 кг", nameEn: "Braid 4.5 kg", power: 4.5, isLeader: false },
-            { id: 33, type: 'braid', nameRu: "Шнур 6.0 кг", nameEn: "Braid 6.0 kg", power: 6.0, isLeader: false },
-            { id: 34, type: 'braid', nameRu: "Шнур 7.7 кг", nameEn: "Braid 7.7 kg", power: 7.7, isLeader: false },
-            { id: 35, type: 'braid', nameRu: "Шнур 8.65 кг", nameEn: "Braid 8.65 kg", power: 8.65, isLeader: false },
-            { id: 36, type: 'braid', nameRu: "Шнур 9.1 кг", nameEn: "Braid 9.1 kg", power: 9.1, isLeader: false },
-            { id: 37, type: 'braid', nameRu: "Шнур 10.4 кг", nameEn: "Braid 10.4 kg", power: 10.4, isLeader: false },
-            { id: 38, type: 'braid', nameRu: "Шнур 12.1 кг", nameEn: "Braid 12.1 kg", power: 12.1, isLeader: false },
-            { id: 39, type: 'braid', nameRu: "Шнур 13.6 кг", nameEn: "Braid 13.6 kg", power: 13.6, isLeader: false },
-            { id: 40, type: 'braid', nameRu: "Шнур 15.4 кг", nameEn: "Braid 15.4 kg", power: 15.4, isLeader: false },
-            { id: 41, type: 'braid', nameRu: "Шнур 17.1 кг", nameEn: "Braid 17.1 kg", power: 17.1, isLeader: false },
-            { id: 42, type: 'braid', nameRu: "Шнур 18.7 кг", nameEn: "Braid 18.7 kg", power: 18.7, isLeader: false },
-            { id: 43, type: 'braid', nameRu: "Шнур 20.85 кг", nameEn: "Braid 20.85 kg", power: 20.85, isLeader: false },
-            { id: 44, type: 'braid', nameRu: "Шнур 24.0 кг", nameEn: "Braid 24.0 kg", power: 24.0, isLeader: false },
-            { id: 45, type: 'braid', nameRu: "Шнур 25.9 кг", nameEn: "Braid 25.9 kg", power: 25.9, isLeader: false },
-            { id: 46, type: 'braid', nameRu: "Шнур 28.0 кг", nameEn: "Braid 28.0 kg", power: 28.0, isLeader: false },
-            { id: 47, type: 'braid', nameRu: "Шнур 30.0 кг", nameEn: "Braid 30.0 kg", power: 30.0, isLeader: false },
-            { id: 48, type: 'braid', nameRu: "Шнур 31.5 кг", nameEn: "Braid 31.5 kg", power: 31.5, isLeader: false },
-            { id: 49, type: 'braid', nameRu: "Шнур 34.8 кг", nameEn: "Braid 34.8 kg", power: 34.8, isLeader: false },
-            { id: 50, type: 'braid', nameRu: "Шнур 36.0 кг", nameEn: "Braid 36.0 kg", power: 36.0, isLeader: false },
-            { id: 51, type: 'braid', nameRu: "Шнур 40.0 кг", nameEn: "Braid 40.0 kg", power: 40.0, isLeader: false },
-            // Leaders (Mono, Fluoro, Titanium, Carp)
-            { id: 52, type: 'leader-mono', nameRu: "Моно-поводок 1.2 кг", nameEn: "Mono Leader 1.2 kg", power: 1.2, isLeader: true },
-            { id: 53, type: 'leader-mono', nameRu: "Моно-поводок 1.85 кг", nameEn: "Mono Leader 1.85 kg", power: 1.85, isLeader: true },
-            { id: 54, type: 'leader-mono', nameRu: "Моно-поводок 2.5 кг", nameEn: "Mono Leader 2.5 kg", power: 2.5, isLeader: true },
-            { id: 55, type: 'leader-mono', nameRu: "Моно-поводок 4.4 кг", nameEn: "Mono Leader 4.4 kg", power: 4.4, isLeader: true },
-            { id: 56, type: 'leader-fluoro', nameRu: "Флюоро-поводок 2.7 кг", nameEn: "Fluoro Leader 2.7 kg", power: 2.7, isLeader: true },
-            { id: 57, type: 'leader-fluoro', nameRu: "Флюоро-поводок 3.6 кг", nameEn: "Fluoro Leader 3.6 kg", power: 3.6, isLeader: true },
-            { id: 58, type: 'leader-fluoro', nameRu: "Флюоро-поводок 4.5 кг", nameEn: "Fluoro Leader 4.5 kg", power: 4.5, isLeader: true },
-            { id: 59, type: 'leader-titanium', nameRu: "Титановый поводок 3.2 кг", nameEn: "Titanium Leader 3.2 kg", power: 3.2, isLeader: true },
-            { id: 60, type: 'leader-titanium', nameRu: "Титановый поводок 5.0 кг", nameEn: "Titanium Leader 5.0 kg", power: 5.0, isLeader: true },
-            { id: 61, type: 'leader-carp', nameRu: "Карповый поводок 7.7 кг", nameEn: "Carp Leader 7.7 kg", power: 7.7, isLeader: true },
-            { id: 62, type: 'leader-carp', nameRu: "Карповый поводок 11.35 кг", nameEn: "Carp Leader 11.35 kg", power: 11.35, isLeader: true },
-            { id: 63, type: 'leader-carp', nameRu: "Карповый поводок 13.6 кг", nameEn: "Carp Leader 13.6 kg", power: 13.6, isLeader: true },
-            { id: 64, type: 'leader-carp', nameRu: "Карповый поводок 15.9 кг", nameEn: "Carp Leader 15.9 kg", power: 15.9, isLeader: true },
-            { id: 65, type: 'leader-carp', nameRu: "Карповый поводок 18.15 кг", nameEn: "Carp Leader 18.15 kg", power: 18.15, isLeader: true },
-            { id: 66, type: 'leader-carp', nameRu: "Карповый поводок 20.4 кг", nameEn: "Carp Leader 20.4 kg", power: 20.4, isLeader: true },
-            { id: 67, type: 'leader-carp', nameRu: "Карповый поводок 23.6 кг", nameEn: "Carp Leader 23.6 kg", power: 23.6, isLeader: true },
-            { id: 68, type: 'leader-carp', nameRu: "Карповый поводок 25.4 кг", nameEn: "Carp Leader 25.4 kg", power: 25.4, isLeader: true }
-        ];
-
-        // Катушки (Безынерционные и Мультипликаторные)
         const reels = [
-            // Spinning Reels (Безынерционные)
-            { id: 1, type: 'spinning', nameRu: "Безынерц. 1.25 кг (6 ступ.)", nameEn: "Spinning 1.25 kg (6 steps)", power: 1.25, steps: 6 },
-            { id: 2, type: 'spinning', nameRu: "Безынерц. 1.45 кг (12 ступ.)", nameEn: "Spinning 1.45 kg (12 steps)", power: 1.45, steps: 12 },
-            { id: 3, type: 'spinning', nameRu: "Безынерц. 1.55 кг (6 ступ.)", nameEn: "Spinning 1.55 kg (6 steps)", power: 1.55, steps: 6 },
-            { id: 4, type: 'spinning', nameRu: "Безынерц. 1.6 кг (6 ступ.)", nameEn: "Spinning 1.6 kg (6 steps)", power: 1.6, steps: 6 },
-            { id: 5, type: 'spinning', nameRu: "Безынерц. 2.0 кг (12 ступ.)", nameEn: "Spinning 2.0 kg (12 steps)", power: 2.0, steps: 12 },
-            { id: 6, type: 'spinning', nameRu: "Безынерц. 2.25 кг (6 ступ.)", nameEn: "Spinning 2.25 kg (6 steps)", power: 2.25, steps: 6 },
-            { id: 7, type: 'spinning', nameRu: "Безынерц. 2.2 кг (6 ступ.)", nameEn: "Spinning 2.2 kg (6 steps)", power: 2.2, steps: 6 },
-            { id: 8, type: 'spinning', nameRu: "Безынерц. 2.3 кг (8 ступ.)", nameEn: "Spinning 2.3 kg (8 steps)", power: 2.3, steps: 8 },
-            { id: 9, type: 'spinning', nameRu: "Безынерц. 2.6 кг (6 ступ.)", nameEn: "Spinning 2.6 kg (6 steps)", power: 2.6, steps: 6 },
-            { id: 10, type: 'spinning', nameRu: "Безынерц. 2.9 кг (6 ступ.)", nameEn: "Spinning 2.9 kg (6 steps)", power: 2.9, steps: 6 },
-            { id: 11, type: 'spinning', nameRu: "Безынерц. 2.9 кг (6 ступ.)", nameEn: "Spinning 2.9 kg (6 steps)", power: 2.9, steps: 6 },
-            { id: 12, type: 'spinning', nameRu: "Безынерц. 3.0 кг (6 ступ.)", nameEn: "Spinning 3.0 kg (6 steps)", power: 3.0, steps: 6 },
-            { id: 13, type: 'spinning', nameRu: "Безынерц. 2.9 кг (8 ступ.)", nameEn: "Spinning 2.9 kg (8 steps)", power: 2.9, steps: 8 },
-            { id: 14, type: 'spinning', nameRu: "Безынерц. 3.25 кг (6 ступ.)", nameEn: "Spinning 3.25 kg (6 steps)", power: 3.25, steps: 6 },
-            { id: 15, type: 'spinning', nameRu: "Безынерц. 3.5 кг (6 ступ.)", nameEn: "Spinning 3.5 kg (6 steps)", power: 3.5, steps: 6 },
-            { id: 16, type: 'spinning', nameRu: "Безынерц. 3.5 кг (6 ступ.)", nameEn: "Spinning 3.5 kg (6 steps)", power: 3.5, steps: 6 },
-            { id: 17, type: 'spinning', nameRu: "Безынерц. 4.0 кг (6 ступ.)", nameEn: "Spinning 4.0 kg (6 steps)", power: 4.0, steps: 6 },
-            { id: 18, type: 'spinning', nameRu: "Безынерц. 3.85 кг (6 ступ.)", nameEn: "Spinning 3.85 kg (6 steps)", power: 3.85, steps: 6 },
-            { id: 19, type: 'spinning', nameRu: "Безынерц. 4.0 кг (8 ступ.)", nameEn: "Spinning 4.0 kg (8 steps)", power: 4.0, steps: 8 },
-            { id: 20, type: 'spinning', nameRu: "Безынерц. 4.0 кг (8 ступ.)", nameEn: "Spinning 4.0 kg (8 steps)", power: 4.0, steps: 8 },
-            { id: 21, type: 'spinning', nameRu: "Безынерц. 4.3 кг (6 ступ.)", nameEn: "Spinning 4.3 kg (6 steps)", power: 4.3, steps: 6 },
-            { id: 22, type: 'spinning', nameRu: "Безынерц. 4.0 кг (8 ступ.)", nameEn: "Spinning 4.0 kg (8 steps)", power: 4.0, steps: 8 },
-            { id: 23, type: 'spinning', nameRu: "Безынерц. 4.5 кг (8 ступ.)", nameEn: "Spinning 4.5 kg (8 steps)", power: 4.5, steps: 8 },
-            { id: 24, type: 'spinning', nameRu: "Безынерц. 4.75 кг (6 ступ.)", nameEn: "Spinning 4.75 kg (6 steps)", power: 4.75, steps: 6 },
-            { id: 25, type: 'spinning', nameRu: "Безынерц. 5.0 кг (12 ступ.)", nameEn: "Spinning 5.0 kg (12 steps)", power: 5.0, steps: 12 },
-            { id: 26, type: 'spinning', nameRu: "Безынерц. 5.0 кг (12 ступ.)", nameEn: "Spinning 5.0 kg (12 steps)", power: 5.0, steps: 12 },
-            { id: 27, type: 'spinning', nameRu: "Безынерц. 5.0 кг (12 ступ.)", nameEn: "Spinning 5.0 kg (12 steps)", power: 5.0, steps: 12 },
-            { id: 28, type: 'spinning', nameRu: "Безынерц. 5.5 кг (8 ступ.)", nameEn: "Spinning 5.5 kg (8 steps)", power: 5.5, steps: 8 },
-            { id: 29, type: 'spinning', nameRu: "Безынерц. 5.5 кг (8 ступ.)", nameEn: "Spinning 5.5 kg (8 steps)", power: 5.5, steps: 8 },
-            { id: 30, type: 'spinning', nameRu: "Безынерц. 6.0 кг (8 ступ.)", nameEn: "Spinning 6.0 kg (8 steps)", power: 6.0, steps: 8 },
-            { id: 31, type: 'spinning', nameRu: "Безынерц. 6.0 кг (8 ступ.)", nameEn: "Spinning 6.0 kg (8 steps)", power: 6.0, steps: 8 },
-            { id: 32, type: 'spinning', nameRu: "Безынерц. 7.0 кг (6 ступ.)", nameEn: "Spinning 7.0 kg (6 steps)", power: 7.0, steps: 6 },
-            { id: 33, type: 'spinning', nameRu: "Безынерц. 7.5 кг (8 ступ.)", nameEn: "Spinning 7.5 kg (8 steps)", power: 7.5, steps: 8 },
-            // Casting Reels (Мультипликаторные)
-            { id: 34, type: 'casting', nameRu: "Мультипл. 2.8 кг (6 ступ.)", nameEn: "Casting 2.8 kg (6 steps)", power: 2.8, steps: 6 },
-            { id: 35, type: 'casting', nameRu: "Мультипл. 3.0 кг (6 ступ.)", nameEn: "Casting 3.0 kg (6 steps)", power: 3.0, steps: 6 },
-            { id: 36, type: 'casting', nameRu: "Мультипл. 3.5 кг (6 ступ.)", nameEn: "Casting 3.5 kg (6 steps)", power: 3.5, steps: 6 },
-            { id: 37, type: 'casting', nameRu: "Мультипл. 3.5 кг (8 ступ.)", nameEn: "Casting 3.5 kg (8 steps)", power: 3.5, steps: 8 },
-            { id: 38, type: 'casting', nameRu: "Мультипл. 3.7 кг (6 ступ.)", nameEn: "Casting 3.7 kg (6 steps)", power: 3.7, steps: 6 },
-            { id: 39, type: 'casting', nameRu: "Мультипл. 4.0 кг (8 ступ.)", nameEn: "Casting 4.0 kg (8 steps)", power: 4.0, steps: 8 },
-            { id: 40, type: 'casting', nameRu: "Мультипл. 4.0 кг (8 ступ.)", nameEn: "Casting 4.0 kg (8 steps)", power: 4.0, steps: 8 },
-            { id: 41, type: 'casting', nameRu: "Мультипл. 4.8 кг (8 ступ.)", nameEn: "Casting 4.8 kg (8 steps)", power: 4.8, steps: 8 },
-            { id: 42, type: 'casting', nameRu: "Мультипл. 4.7 кг (8 ступ.)", nameEn: "Casting 4.7 kg (8 steps)", power: 4.7, steps: 8 },
-            { id: 43, type: 'casting', nameRu: "Мультипл. 5.0 кг (6 ступ.)", nameEn: "Casting 5.0 kg (6 steps)", power: 5.0, steps: 6 },
-            { id: 44, type: 'casting', nameRu: "Мультипл. 5.5 кг (8 ступ.)", nameEn: "Casting 5.5 kg (8 steps)", power: 5.5, steps: 8 },
-            { id: 45, type: 'casting', nameRu: "Мультипл. 7.0 кг (6 ступ.)", nameEn: "Casting 7.0 kg (6 steps)", power: 7.0, steps: 6 },
-            { id: 46, type: 'casting', nameRu: "Мультипл. 7.5 кг (6 ступ.)", nameEn: "Casting 7.5 kg (6 steps)", power: 7.5, steps: 6 }
+            // Безынерционные
+            {id:1,level:1,nameRu:"Катушка 1.25кг",nameEn:"Reel 1.25kg",power:1.25,speed:50,steps:6,price:500,type:"spinning"},
+            {id:2,level:2,nameRu:"Катушка 1.45кг",nameEn:"Reel 1.45kg",power:1.45,speed:70,steps:12,price:750,type:"spinning"},
+            {id:3,level:3,nameRu:"Катушка 1.55кг",nameEn:"Reel 1.55kg",power:1.55,speed:60,steps:6,price:650,type:"spinning"},
+            {id:4,level:3,nameRu:"Катушка 3.25кг",nameEn:"Reel 3.25kg",power:3.25,speed:70,steps:6,price:4200,type:"spinning"},
+            {id:5,level:4,nameRu:"Катушка 1.6кг",nameEn:"Reel 1.6kg",power:1.6,speed:70,steps:6,price:850,type:"spinning"},
+            {id:6,level:5,nameRu:"Катушка 2.0кг",nameEn:"Reel 2.0kg",power:2.0,speed:70,steps:12,price:1150,type:"spinning"},
+            {id:7,level:5,nameRu:"Катушка 2.25кг",nameEn:"Reel 2.25kg",power:2.25,speed:60,steps:6,price:1150,type:"spinning"},
+            {id:8,level:5,nameRu:"Катушка 2.9кг",nameEn:"Reel 2.9kg",power:2.9,speed:70,steps:12,price:2800,type:"spinning"},
+            {id:9,level:6,nameRu:"Катушка 2.2кг",nameEn:"Reel 2.2kg",power:2.2,speed:60,steps:6,price:2000,type:"spinning"},
+            {id:10,level:6,nameRu:"Катушка 2.3кг",nameEn:"Reel 2.3kg",power:2.3,speed:80,steps:8,price:2500,type:"spinning"},
+            {id:11,level:7,nameRu:"Катушка 2.6кг",nameEn:"Reel 2.6kg",power:2.6,speed:60,steps:6,price:2300,type:"spinning"},
+            {id:12,level:7,nameRu:"Катушка 2.9кг",nameEn:"Reel 2.9kg",power:2.9,speed:70,steps:6,price:2800,type:"spinning"},
+            {id:13,level:8,nameRu:"Катушка 2.9кг 60см",nameEn:"Reel 2.9kg 60cm",power:2.9,speed:60,steps:6,price:2400,type:"spinning"},
+            {id:14,level:8,nameRu:"Катушка 3.0кг",nameEn:"Reel 3.0kg",power:3.0,speed:64,steps:6,price:3710,type:"spinning"},
+            {id:15,level:10,nameRu:"Катушка 2.9кг 80см",nameEn:"Reel 2.9kg 80cm",power:2.9,speed:80,steps:8,price:3500,type:"spinning"},
+            {id:16,level:10,nameRu:"Катушка 3.25кг 70см",nameEn:"Reel 3.25kg 70cm",power:3.25,speed:70,steps:6,price:4200,type:"spinning"},
+            {id:17,level:10,nameRu:"Катушка 4.3кг",nameEn:"Reel 4.3kg",power:4.3,speed:78,steps:12,price:5800,type:"spinning"},
+            {id:18,level:10,nameRu:"Катушка 5.0кг 80см",nameEn:"Reel 5.0kg 80cm",power:5.0,speed:80,steps:12,price:5900,type:"spinning"},
+            {id:19,level:11,nameRu:"Катушка 3.5кг 70см",nameEn:"Reel 3.5kg 70cm",power:3.5,speed:70,steps:6,price:4700,type:"spinning"},
+            {id:20,level:12,nameRu:"Катушка 3.5кг 76см",nameEn:"Reel 3.5kg 76cm",power:3.5,speed:76,steps:6,price:4820,type:"spinning"},
+            {id:21,level:12,nameRu:"Катушка 5.9кг",nameEn:"Reel 5.9kg",power:5.9,speed:93,steps:12,price:9000,type:"spinning"},
+            {id:22,level:13,nameRu:"Катушка 4.0кг 70см",nameEn:"Reel 4.0kg 70cm",power:4.0,speed:70,steps:6,price:5000,type:"spinning"},
+            {id:23,level:13,nameRu:"Катушка 3.85кг",nameEn:"Reel 3.85kg",power:3.85,speed:75,steps:6,price:5350,type:"spinning"},
+            {id:24,level:14,nameRu:"Катушка 4.0кг 80см",nameEn:"Reel 4.0kg 80cm",power:4.0,speed:80,steps:8,price:5400,type:"spinning"},
+            {id:25,level:14,nameRu:"Катушка 5.5кг 70см",nameEn:"Reel 5.5kg 70cm",power:5.5,speed:70,steps:12,price:8500,type:"spinning"},
+            {id:26,level:15,nameRu:"Катушка 4.0кг 80см 8ст",nameEn:"Reel 4.0kg 80cm 8st",power:4.0,speed:80,steps:8,price:5500,type:"spinning"},
+            {id:27,level:15,nameRu:"Катушка 4.3кг 78см",nameEn:"Reel 4.3kg 78cm",power:4.3,speed:78,steps:6,price:5870,type:"spinning"},
+            {id:28,level:16,nameRu:"Катушка 4.0кг 80см",nameEn:"Reel 4.0kg 80cm",power:4.0,speed:80,steps:8,price:5700,type:"spinning"},
+            {id:29,level:17,nameRu:"Катушка 4.5кг 80см",nameEn:"Reel 4.5kg 80cm",power:4.5,speed:80,steps:8,price:5900,type:"spinning"},
+            {id:30,level:17,nameRu:"Катушка 4.75кг",nameEn:"Reel 4.75kg",power:4.75,speed:81,steps:6,price:6300,type:"spinning"},
+            {id:31,level:18,nameRu:"Катушка 5.0кг 70см 12ст",nameEn:"Reel 5.0kg 70cm 12st",power:5.0,speed:70,steps:12,price:7200,type:"spinning"},
+            {id:32,level:19,nameRu:"Катушка 5.0кг 70см 7400",nameEn:"Reel 5.0kg 70cm 7400",power:5.0,speed:70,steps:12,price:7400,type:"spinning"},
+            {id:33,level:19,nameRu:"Катушка 5.0кг 70см 7800",nameEn:"Reel 5.0kg 70cm 7800",power:5.0,speed:70,steps:12,price:7800,type:"spinning"},
+            {id:34,level:20,nameRu:"Катушка 5.5кг 70см 8300",nameEn:"Reel 5.5kg 70cm 8300",power:5.5,speed:70,steps:8,price:8300,type:"spinning"},
+            {id:35,level:20,nameRu:"Катушка 5.5кг 70см 8400",nameEn:"Reel 5.5kg 70cm 8400",power:5.5,speed:70,steps:8,price:8400,type:"spinning"},
+            {id:36,level:20,nameRu:"Катушка 5.7кг",nameEn:"Reel 5.7kg",power:5.7,speed:88,steps:8,price:8700,type:"spinning"},
+            {id:37,level:20,nameRu:"Катушка 8.15кг",nameEn:"Reel 8.15kg",power:8.15,speed:120,steps:12,price:13500,type:"spinning"},
+            {id:38,level:21,nameRu:"Катушка 5.5кг 8500",nameEn:"Reel 5.5kg 8500",power:5.5,speed:70,steps:8,price:8500,type:"spinning"},
+            {id:39,level:22,nameRu:"Катушка 5.9кг 9100",nameEn:"Reel 5.9kg 9100",power:5.9,speed:93,steps:8,price:9100,type:"spinning"},
+            {id:40,level:22,nameRu:"Катушка 9.5кг",nameEn:"Reel 9.5kg",power:9.5,speed:90,steps:12,price:16700,type:"spinning"},
+            {id:41,level:23,nameRu:"Катушка 6.0кг",nameEn:"Reel 6.0kg",power:6.0,speed:70,steps:12,price:9200,type:"spinning"},
+            {id:42,level:24,nameRu:"Катушка 6.35кг",nameEn:"Reel 6.35kg",power:6.35,speed:98,steps:8,price:10000,type:"spinning"},
+            {id:43,level:24,nameRu:"Катушка 7.0кг",nameEn:"Reel 7.0kg",power:7.0,speed:75,steps:8,price:10600,type:"spinning"},
+            {id:44,level:25,nameRu:"Катушка 7.5кг",nameEn:"Reel 7.5kg",power:7.5,speed:80,steps:8,price:12000,type:"spinning"},
+            {id:45,level:26,nameRu:"Катушка 8.0кг",nameEn:"Reel 8.0kg",power:8.0,speed:75,steps:8,price:11200,type:"spinning"},
+            {id:46,level:26,nameRu:"Катушка 7.7кг",nameEn:"Reel 7.7kg",power:7.7,speed:110,steps:8,price:11850,type:"spinning"},
+            {id:47,level:26,nameRu:"Катушка 12.0кг",nameEn:"Reel 12.0kg",power:12.0,speed:70,steps:12,price:22000,type:"spinning"},
+            {id:48,level:27,nameRu:"Катушка 8.15кг 13500",nameEn:"Reel 8.15kg 13500",power:8.15,speed:120,steps:8,price:13500,type:"spinning"},
+            {id:49,level:27,nameRu:"Катушка 8.5кг",nameEn:"Reel 8.5kg",power:8.5,speed:80,steps:8,price:14400,type:"spinning"},
+            {id:50,level:28,nameRu:"Катушка 9.0кг 11800",nameEn:"Reel 9.0kg 11800",power:9.0,speed:75,steps:8,price:11800,type:"spinning"},
+            {id:51,level:28,nameRu:"Катушка 8.6кг",nameEn:"Reel 8.6kg",power:8.6,speed:125,steps:8,price:15700,type:"spinning"},
+            {id:52,level:29,nameRu:"Катушка 9.0кг 16400",nameEn:"Reel 9.0kg 16400",power:9.0,speed:90,steps:12,price:16400,type:"spinning"},
+            {id:53,level:30,nameRu:"Катушка 10.0кг",nameEn:"Reel 10.0kg",power:10.0,speed:75,steps:8,price:14150,type:"spinning"},
+            {id:54,level:31,nameRu:"Катушка 9.5кг 16700",nameEn:"Reel 9.5kg 16700",power:9.5,speed:90,steps:12,price:16700,type:"spinning"},
+            {id:55,level:32,nameRu:"Катушка 11.0кг 22000",nameEn:"Reel 11.0kg 22000",power:11.0,speed:70,steps:12,price:22000,type:"spinning"},
+            {id:56,level:33,nameRu:"Катушка 11.0кг 15400",nameEn:"Reel 11.0kg 15400",power:11.0,speed:75,steps:8,price:15400,type:"spinning"},
+            {id:57,level:34,nameRu:"Катушка 11.0кг 18000",nameEn:"Reel 11.0kg 18000",power:11.0,speed:90,steps:12,price:18000,type:"spinning"},
+            {id:58,level:34,nameRu:"Катушка 15.4кг",nameEn:"Reel 15.4kg",power:15.4,speed:108,steps:12,price:29500,type:"spinning"},
+            {id:59,level:34,nameRu:"Катушка 19.0кг",nameEn:"Reel 19.0kg",power:19.0,speed:80,steps:12,price:34500,type:"spinning"},
+            {id:60,level:35,nameRu:"Катушка 12.0кг 23500",nameEn:"Reel 12.0kg 23500",power:12.0,speed:70,steps:12,price:23500,type:"spinning"},
+            {id:61,level:36,nameRu:"Катушка 12.0кг 17000",nameEn:"Reel 12.0kg 17000",power:12.0,speed:75,steps:8,price:17000,type:"spinning"},
+            {id:62,level:36,nameRu:"Катушка 14.5кг",nameEn:"Reel 14.5kg",power:14.5,speed:100,steps:8,price:27400,type:"spinning"},
+            {id:63,level:37,nameRu:"Катушка 13.0кг",nameEn:"Reel 13.0kg",power:13.0,speed:70,steps:12,price:25500,type:"spinning"},
+            {id:64,level:38,nameRu:"Катушка 15.4кг 29500",nameEn:"Reel 15.4kg 29500",power:15.4,speed:108,steps:8,price:29500,type:"spinning"},
+            {id:65,level:38,nameRu:"Катушка 16.0кг",nameEn:"Reel 16.0kg",power:16.0,speed:80,steps:8,price:30300,type:"spinning"},
+            {id:66,level:39,nameRu:"Катушка 17.0кг",nameEn:"Reel 17.0kg",power:17.0,speed:80,steps:8,price:32000,type:"spinning"},
+            {id:67,level:40,nameRu:"Катушка 16.3кг",nameEn:"Reel 16.3kg",power:16.3,speed:116,steps:8,price:31200,type:"spinning"},
+            {id:68,level:40,nameRu:"Катушка 19.0кг 34500",nameEn:"Reel 19.0kg 34500",power:19.0,speed:80,steps:8,price:34500,type:"spinning"},
+            {id:69,level:40,nameRu:"Катушка 19.65кг",nameEn:"Reel 19.65kg",power:19.65,speed:107,steps:12,price:36000,type:"spinning"},
+            {id:70,level:42,nameRu:"Катушка 22.5кг 400",nameEn:"Reel 22.5kg 400",power:22.5,speed:90,steps:12,price:40000,type:"spinning"},
+            {id:71,level:43,nameRu:"Катушка 18.15кг",nameEn:"Reel 18.15kg",power:18.15,speed:100,steps:12,price:35150,type:"spinning"},
+            {id:72,level:43,nameRu:"Катушка 21.0кг",nameEn:"Reel 21.0kg",power:21.0,speed:90,steps:8,price:38200,type:"spinning"},
+            {id:73,level:45,nameRu:"Катушка 19.65кг 36300",nameEn:"Reel 19.65kg 36300",power:19.65,speed:107,steps:12,price:36300,type:"spinning"},
+            {id:74,level:45,nameRu:"Катушка 22.5кг 40000",nameEn:"Reel 22.5kg 40000",power:22.5,speed:90,steps:8,price:40000,type:"spinning"},
+            {id:75,level:46,nameRu:"Катушка 21.15кг",nameEn:"Reel 21.15kg",power:21.15,speed:114,steps:12,price:39500,type:"spinning"},
+            {id:76,level:46,nameRu:"Катушка 20.5кг 390",nameEn:"Reel 20.5kg 390",power:20.5,speed:150,steps:12,price:39000,type:"spinning"},
+            {id:77,level:46,nameRu:"Катушка 24.2кг 485",nameEn:"Reel 24.2kg 485",power:24.2,speed:106,steps:12,price:48500,type:"spinning"},
+            {id:78,level:46,nameRu:"Катушка 25.2кг",nameEn:"Reel 25.2kg",power:25.2,speed:120,steps:12,price:50000,type:"spinning"},
+            {id:79,level:47,nameRu:"Катушка 24.0кг",nameEn:"Reel 24.0kg",power:24.0,speed:90,steps:8,price:42000,type:"spinning"},
+            {id:80,level:48,nameRu:"Катушка 16.5кг",nameEn:"Reel 16.5kg",power:16.5,speed:145,steps:12,price:37800,type:"spinning"},
+            {id:81,level:48,nameRu:"Катушка 22.2кг",nameEn:"Reel 22.2kg",power:22.2,speed:102,steps:12,price:46200,type:"spinning"},
+            {id:82,level:49,nameRu:"Катушка 20.0кг 37100",nameEn:"Reel 20.0kg 37100",power:20.0,speed:110,steps:12,price:37100,type:"spinning"},
+            {id:83,level:49,nameRu:"Катушка 20.5кг 39100",nameEn:"Reel 20.5kg 39100",power:20.5,speed:150,steps:12,price:39100,type:"spinning"},
+            {id:84,level:49,nameRu:"Катушка 24.2кг 48500",nameEn:"Reel 24.2kg 48500",power:24.2,speed:106,steps:12,price:48500,type:"spinning"},
+            {id:85,level:50,nameRu:"Катушка 21.5кг",nameEn:"Reel 21.5kg",power:21.5,speed:155,steps:12,price:41100,type:"spinning"},
+            {id:86,level:50,nameRu:"Катушка 26.2кг",nameEn:"Reel 26.2kg",power:26.2,speed:110,steps:12,price:50500,type:"spinning"},
+            {id:87,level:50,nameRu:"Катушка 30.3кг 505",nameEn:"Reel 30.3kg 505",power:30.3,speed:110,steps:12,price:50500,type:"spinning"},
+            {id:88,level:50,nameRu:"Катушка 26.5кг 535",nameEn:"Reel 26.5kg 535",power:26.5,speed:95,steps:12,price:53500,type:"spinning"},
+            {id:89,level:53,nameRu:"Катушка 22.1кг",nameEn:"Reel 22.1kg",power:22.1,speed:115,steps:12,price:43700,type:"spinning"},
+            {id:90,level:53,nameRu:"Катушка 29.3кг 545",nameEn:"Reel 29.3kg 545",power:29.3,speed:115,steps:12,price:54500,type:"spinning"},
+            {id:91,level:54,nameRu:"Катушка 25.2кг 49900",nameEn:"Reel 25.2kg 49900",power:25.2,speed:120,steps:12,price:49900,type:"spinning"},
+            {id:92,level:54,nameRu:"Катушка 24.5кг 50000",nameEn:"Reel 24.5kg 50000",power:24.5,speed:90,steps:12,price:50000,type:"spinning"},
+            {id:93,level:55,nameRu:"Катушка 26.5кг 56500",nameEn:"Reel 26.5kg 56500",power:26.5,speed:95,steps:12,price:56500,type:"spinning"},
+            {id:94,level:55,nameRu:"Катушка 29.5кг",nameEn:"Reel 29.5kg",power:29.5,speed:100,steps:12,price:58400,type:"spinning"},
+            {id:95,level:55,nameRu:"Катушка 32.0кг 530",nameEn:"Reel 32.0kg 530",power:32.0,speed:88,steps:12,price:53000,type:"spinning"},
+            {id:96,level:56,nameRu:"Катушка 30.0кг",nameEn:"Reel 30.0kg",power:30.0,speed:88,steps:8,price:51380,type:"spinning"},
+            {id:97,level:58,nameRu:"Катушка 31.65кг",nameEn:"Reel 31.65kg",power:31.65,speed:88,steps:8,price:53380,type:"spinning"},
+            {id:98,level:60,nameRu:"Катушка 33.3кг",nameEn:"Reel 33.3kg",power:33.3,speed:88,steps:8,price:57370,type:"spinning"},
+            {id:99,level:61,nameRu:"Катушка 28.0кг 52300",nameEn:"Reel 28.0kg 52300",power:28.0,speed:110,steps:12,price:52300,type:"spinning"},
+            {id:100,level:62,nameRu:"Катушка 28.5кг",nameEn:"Reel 28.5kg",power:28.5,speed:105,steps:12,price:55500,type:"spinning"},
+            {id:101,level:63,nameRu:"Катушка 29.3кг 54790",nameEn:"Reel 29.3kg 54790",power:29.3,speed:115,steps:12,price:54790,type:"spinning"},
+            {id:102,level:64,nameRu:"Катушка 30.3кг 56850",nameEn:"Reel 30.3kg 56850",power:30.3,speed:110,steps:12,price:56850,type:"spinning"},
+            {id:103,level:65,nameRu:"Катушка 30.5кг",nameEn:"Reel 30.5kg",power:30.5,speed:120,steps:12,price:56050,type:"spinning"},
+            {id:104,level:65,nameRu:"Катушка 32.0кг 58080",nameEn:"Reel 32.0kg 58080",power:32.0,speed:115,steps:12,price:58080,type:"spinning"},
+            // Мультипликаторные
+            {id:200,level:6,nameRu:"Мультипл. 2.8кг",nameEn:"Baitcasting 2.8kg",power:2.8,speed:50,steps:6,price:950,type:"casting"},
+            {id:201,level:7,nameRu:"Мультипл. 3.0кг",nameEn:"Baitcasting 3.0kg",power:3.0,speed:60,steps:6,price:2850,type:"casting"},
+            {id:202,level:9,nameRu:"Мультипл. 3.5кг 3700",nameEn:"Baitcasting 3.5kg 3700",power:3.5,speed:50,steps:6,price:3700,type:"casting"},
+            {id:203,level:10,nameRu:"Мультипл. 3.5кг 4900",nameEn:"Baitcasting 3.5kg 4900",power:3.5,speed:80,steps:6,price:4900,type:"casting"},
+            {id:204,level:12,nameRu:"Мультипл. 4.0кг 5000",nameEn:"Baitcasting 4.0kg 5000",power:4.0,speed:65,steps:8,price:5000,type:"casting"},
+            {id:205,level:15,nameRu:"Мультипл. 4.0кг 5800",nameEn:"Baitcasting 4.0kg 5800",power:4.0,speed:70,steps:6,price:5800,type:"casting"},
+            {id:206,level:17,nameRu:"Мультипл. 4.0кг 6300",nameEn:"Baitcasting 4.0kg 6300",power:4.0,speed:80,steps:6,price:6300,type:"casting"},
+            {id:207,level:18,nameRu:"Мультипл. 4.8кг",nameEn:"Baitcasting 4.8kg",power:4.8,speed:55,steps:8,price:7500,type:"casting"},
+            {id:208,level:18,nameRu:"Мультипл. 7.5кг 110",nameEn:"Baitcasting 7.5kg 110",power:7.5,speed:50,steps:12,price:11000,type:"casting"},
+            {id:209,level:19,nameRu:"Мультипл. 4.7кг",nameEn:"Baitcasting 4.7kg",power:4.7,speed:65,steps:8,price:7700,type:"casting"},
+            {id:210,level:20,nameRu:"Мультипл. 5.0кг",nameEn:"Baitcasting 5.0kg",power:5.0,speed:70,steps:6,price:6800,type:"casting"},
+            {id:211,level:21,nameRu:"Мультипл. 5.5кг",nameEn:"Baitcasting 5.5kg",power:5.5,speed:55,steps:8,price:8600,type:"casting"},
+            {id:212,level:22,nameRu:"Мультипл. 7.0кг",nameEn:"Baitcasting 7.0kg",power:7.0,speed:55,steps:6,price:10000,type:"casting"},
+            {id:213,level:24,nameRu:"Мультипл. 7.5кг 11000",nameEn:"Baitcasting 7.5kg 11000",power:7.5,speed:50,steps:6,price:11000,type:"casting"},
+            {id:214,level:26,nameRu:"Мультипл. 8.5кг",nameEn:"Baitcasting 8.5kg",power:8.5,speed:55,steps:6,price:13500,type:"casting"},
+            {id:215,level:27,nameRu:"Мультипл. 9.0кг",nameEn:"Baitcasting 9.0kg",power:9.0,speed:50,steps:6,price:14500,type:"casting"},
+            {id:216,level:28,nameRu:"Мультипл. 9.5кг",nameEn:"Baitcasting 9.5kg",power:9.5,speed:80,steps:8,price:18000,type:"casting"},
+            {id:217,level:29,nameRu:"Мультипл. 10.0кг 18500",nameEn:"Baitcasting 10.0kg 18500",power:10.0,speed:70,steps:8,price:18500,type:"casting"},
+            {id:218,level:29,nameRu:"Мультипл. 10.0кг 18800",nameEn:"Baitcasting 10.0kg 18800",power:10.0,speed:85,steps:8,price:18800,type:"casting"},
+            {id:219,level:30,nameRu:"Мультипл. 15.0кг",nameEn:"Baitcasting 15.0kg",power:15.0,speed:80,steps:12,price:30000,type:"casting"},
+            {id:220,level:31,nameRu:"Мультипл. 10.5кг",nameEn:"Baitcasting 10.5kg",power:10.5,speed:75,steps:8,price:19000,type:"casting"},
+            {id:221,level:33,nameRu:"Мультипл. 11.0кг",nameEn:"Baitcasting 11.0kg",power:11.0,speed:80,steps:6,price:22000,type:"casting"},
+            {id:222,level:34,nameRu:"Мультипл. 12.0кг",nameEn:"Baitcasting 12.0kg",power:12.0,speed:80,steps:6,price:24200,type:"casting"},
+            {id:223,level:36,nameRu:"Мультипл. 14.0кг",nameEn:"Baitcasting 14.0kg",power:14.0,speed:80,steps:6,price:28500,type:"casting"},
+            {id:224,level:37,nameRu:"Мультипл. 15.0кг 30000",nameEn:"Baitcasting 15.0kg 30000",power:15.0,speed:80,steps:6,price:30000,type:"casting"},
+            {id:225,level:38,nameRu:"Мультипл. 16.0кг",nameEn:"Baitcasting 16.0kg",power:16.0,speed:80,steps:6,price:31000,type:"casting"},
+            {id:226,level:38,nameRu:"Мультипл. 22.0кг 380",nameEn:"Baitcasting 22.0kg 380",power:22.0,speed:80,steps:12,price:38000,type:"casting"},
+            {id:227,level:39,nameRu:"Мультипл. 20.0кг",nameEn:"Baitcasting 20.0kg",power:20.0,speed:80,steps:6,price:36000,type:"casting"},
+            {id:228,level:40,nameRu:"Мультипл. 22.0кг 38000",nameEn:"Baitcasting 22.0kg 38000",power:22.0,speed:80,steps:6,price:38000,type:"casting"},
+            {id:229,level:42,nameRu:"Мультипл. 28.0кг 420",nameEn:"Baitcasting 28.0kg 420",power:28.0,speed:80,steps:12,price:42000,type:"casting"},
+            {id:230,level:46,nameRu:"Мультипл. 26.5кг",nameEn:"Baitcasting 26.5kg",power:26.5,speed:80,steps:8,price:40000,type:"casting"},
+            {id:231,level:48,nameRu:"Мультипл. 28.0кг 42000",nameEn:"Baitcasting 28.0kg 42000",power:28.0,speed:80,steps:8,price:42000,type:"casting"},
+            {id:232,level:50,nameRu:"Мультипл. 29.5кг",nameEn:"Baitcasting 29.5kg",power:29.5,speed:80,steps:8,price:44500,type:"casting"},
+            {id:233,level:50,nameRu:"Мультипл. 32.0кг 485",nameEn:"Baitcasting 32.0kg 485",power:32.0,speed:95,steps:12,price:48500,type:"casting"},
+            {id:234,level:52,nameRu:"Мультипл. 29.0кг",nameEn:"Baitcasting 29.0kg",power:29.0,speed:95,steps:8,price:47300,type:"casting"},
+            {id:235,level:54,nameRu:"Мультипл. 32.0кг 49500",nameEn:"Baitcasting 32.0kg 49500",power:32.0,speed:95,steps:8,price:49500,type:"casting"},
+            {id:236,level:55,nameRu:"Мультипл. 35.0кг",nameEn:"Baitcasting 35.0kg",power:35.0,speed:95,steps:8,price:50000,type:"casting"},
+            {id:237,level:58,nameRu:"Мультипл. 38.0кг 570",nameEn:"Baitcasting 38.0kg 570",power:38.0,speed:110,steps:12,price:57000,type:"casting"},
+            {id:238,level:63,nameRu:"Мультипл. 36.0кг",nameEn:"Baitcasting 36.0kg",power:36.0,speed:110,steps:12,price:54600,type:"casting"},
+            {id:239,level:68,nameRu:"Мультипл. 38.0кг 57450",nameEn:"Baitcasting 38.0kg 57450",power:38.0,speed:110,steps:12,price:57450,type:"casting"},
+            {id:240,level:70,nameRu:"Мультипл. 40.0кг",nameEn:"Baitcasting 40.0kg",power:40.0,speed:110,steps:12,price:58900,type:"casting"},
         ];
 
-        // --- 3. Logic Engine ---
+        const lines = [
+            // Монофил
+            {id:1,level:1,nameRu:"Монофил 0.9кг",nameEn:"Monofilament 0.9kg",power:0.9,type:"mono",isLeader:false},
+            {id:2,level:2,nameRu:"Монофил 0.9кг 300м",nameEn:"Monofilament 0.9kg 300m",power:0.9,type:"mono",isLeader:false},
+            {id:3,level:3,nameRu:"Монофил 1.4кг",nameEn:"Monofilament 1.4kg",power:1.4,type:"mono",isLeader:false},
+            {id:4,level:4,nameRu:"Монофил 1.4кг 300м",nameEn:"Monofilament 1.4kg 300m",power:1.4,type:"mono",isLeader:false},
+            {id:5,level:6,nameRu:"Монофил 1.8кг",nameEn:"Monofilament 1.8kg",power:1.8,type:"mono",isLeader:false},
+            {id:6,level:7,nameRu:"Монофил 1.8кг 300м",nameEn:"Monofilament 1.8kg 300m",power:1.8,type:"mono",isLeader:false},
+            {id:7,level:8,nameRu:"Монофил 3.6кг",nameEn:"Monofilament 3.6kg",power:3.6,type:"mono",isLeader:false},
+            {id:8,level:10,nameRu:"Монофил 2.7кг",nameEn:"Monofilament 2.7kg",power:2.7,type:"mono",isLeader:false},
+            {id:9,level:11,nameRu:"Монофил 2.7кг 300м",nameEn:"Monofilament 2.7kg 300m",power:2.7,type:"mono",isLeader:false},
+            {id:10,level:12,nameRu:"Монофил 2.7кг 500м",nameEn:"Monofilament 2.7kg 500m",power:2.7,type:"mono",isLeader:false},
+            {id:11,level:14,nameRu:"Монофил 5.4кг",nameEn:"Monofilament 5.4kg",power:5.4,type:"mono",isLeader:false},
+            {id:12,level:14,nameRu:"Монофил 3.6кг 150м",nameEn:"Monofilament 3.6kg 150m",power:3.6,type:"mono",isLeader:false},
+            {id:13,level:15,nameRu:"Монофил 3.6кг 300м",nameEn:"Monofilament 3.6kg 300m",power:3.6,type:"mono",isLeader:false},
+            {id:14,level:18,nameRu:"Монофил 7.2кг",nameEn:"Monofilament 7.2kg",power:7.2,type:"mono",isLeader:false},
+            {id:15,level:20,nameRu:"Монофил 5.4кг 150м",nameEn:"Monofilament 5.4kg 150m",power:5.4,type:"mono",isLeader:false},
+            {id:16,level:21,nameRu:"Монофил 5.4кг 300м",nameEn:"Monofilament 5.4kg 300m",power:5.4,type:"mono",isLeader:false},
+            {id:17,level:22,nameRu:"Монофил 5.4кг 500м",nameEn:"Monofilament 5.4kg 500m",power:5.4,type:"mono",isLeader:false},
+            {id:18,level:22,nameRu:"Монофил 9.0кг",nameEn:"Monofilament 9.0kg",power:9.0,type:"mono",isLeader:false},
+            {id:19,level:24,nameRu:"Монофил 7.2кг 150м",nameEn:"Monofilament 7.2kg 150m",power:7.2,type:"mono",isLeader:false},
+            {id:20,level:25,nameRu:"Монофил 7.2кг 300м",nameEn:"Monofilament 7.2kg 300m",power:7.2,type:"mono",isLeader:false},
+            {id:21,level:26,nameRu:"Монофил 7.2кг 500м",nameEn:"Monofilament 7.2kg 500m",power:7.2,type:"mono",isLeader:false},
+            {id:22,level:26,nameRu:"Монофил 11.3кг",nameEn:"Monofilament 11.3kg",power:11.3,type:"mono",isLeader:false},
+            {id:23,level:27,nameRu:"Монофил 9.0кг 150м",nameEn:"Monofilament 9.0kg 150m",power:9.0,type:"mono",isLeader:false},
+            {id:24,level:28,nameRu:"Монофил 9.0кг 300м",nameEn:"Monofilament 9.0kg 300m",power:9.0,type:"mono",isLeader:false},
+            {id:25,level:29,nameRu:"Монофил 9.0кг 500м",nameEn:"Monofilament 9.0kg 500m",power:9.0,type:"mono",isLeader:false},
+            {id:26,level:33,nameRu:"Монофил 11.3кг 150м",nameEn:"Monofilament 11.3kg 150m",power:11.3,type:"mono",isLeader:false},
+            {id:27,level:34,nameRu:"Монофил 14.5кг",nameEn:"Monofilament 14.5kg",power:14.5,type:"mono",isLeader:false},
+            // Флюорокарбон
+            {id:100,level:3,nameRu:"Флюорокарбон 2.7кг",nameEn:"Fluorocarbon 2.7kg",power:2.7,type:"fluoro",isLeader:true},
+            {id:101,level:4,nameRu:"Флюорокарбон 2.7кг 500м",nameEn:"Fluorocarbon 2.7kg 500m",power:2.7,type:"fluoro",isLeader:true},
+            {id:102,level:5,nameRu:"Флюорокарбон 2.7кг 1000м",nameEn:"Fluorocarbon 2.7kg 1000m",power:2.7,type:"fluoro",isLeader:true},
+            {id:103,level:8,nameRu:"Флюорокарбон 3.6кг",nameEn:"Fluorocarbon 3.6kg",power:3.6,type:"fluoro",isLeader:true},
+            {id:104,level:10,nameRu:"Флюорокарбон 4.5кг",nameEn:"Fluorocarbon 4.5kg",power:4.5,type:"fluoro",isLeader:true},
+            {id:105,level:11,nameRu:"Флюорокарбон 3.6кг 150м",nameEn:"Fluorocarbon 3.6kg 150m",power:3.6,type:"fluoro",isLeader:true},
+            {id:106,level:12,nameRu:"Флюорокарбон 3.6кг 300м",nameEn:"Fluorocarbon 3.6kg 300m",power:3.6,type:"fluoro",isLeader:true},
+            {id:107,level:13,nameRu:"Флюорокарбон 3.6кг 500м",nameEn:"Fluorocarbon 3.6kg 500m",power:3.6,type:"fluoro",isLeader:true},
+            {id:108,level:14,nameRu:"Флюорокарбон 5.5кг",nameEn:"Fluorocarbon 5.5kg",power:5.5,type:"fluoro",isLeader:true},
+            {id:109,level:16,nameRu:"Флюорокарбон 4.5кг 150м",nameEn:"Fluorocarbon 4.5kg 150m",power:4.5,type:"fluoro",isLeader:true},
+            {id:110,level:17,nameRu:"Флюорокарбон 4.5кг 300м",nameEn:"Fluorocarbon 4.5kg 300m",power:4.5,type:"fluoro",isLeader:true},
+            {id:111,level:18,nameRu:"Флюорокарбон 4.5кг 500м",nameEn:"Fluorocarbon 4.5kg 500m",power:4.5,type:"fluoro",isLeader:true},
+            {id:112,level:18,nameRu:"Флюорокарбон 6.8кг",nameEn:"Fluorocarbon 6.8kg",power:6.8,type:"fluoro",isLeader:true},
+            {id:113,level:21,nameRu:"Флюорокарбон 5.5кг 150м",nameEn:"Fluorocarbon 5.5kg 150m",power:5.5,type:"fluoro",isLeader:true},
+            {id:114,level:22,nameRu:"Флюорокарбон 5.5кг 300м",nameEn:"Fluorocarbon 5.5kg 300m",power:5.5,type:"fluoro",isLeader:true},
+            {id:115,level:22,nameRu:"Флюорокарбон 5.5кг 500м",nameEn:"Fluorocarbon 5.5kg 500m",power:5.5,type:"fluoro",isLeader:true},
+            {id:116,level:22,nameRu:"Флюорокарбон 9.1кг",nameEn:"Fluorocarbon 9.1kg",power:9.1,type:"fluoro",isLeader:true},
+            {id:117,level:23,nameRu:"Флюорокарбон 6.8кг 150м",nameEn:"Fluorocarbon 6.8kg 150m",power:6.8,type:"fluoro",isLeader:true},
+            {id:118,level:24,nameRu:"Флюорокарбон 6.8кг 300м",nameEn:"Fluorocarbon 6.8kg 300m",power:6.8,type:"fluoro",isLeader:true},
+            {id:119,level:25,nameRu:"Флюорокарбон 6.8кг 500м",nameEn:"Fluorocarbon 6.8kg 500m",power:6.8,type:"fluoro",isLeader:true},
+            {id:120,level:26,nameRu:"Флюорокарбон 11.3кг",nameEn:"Fluorocarbon 11.3kg",power:11.3,type:"fluoro",isLeader:true},
+            {id:121,level:28,nameRu:"Флюорокарбон 9.1кг 150м",nameEn:"Fluorocarbon 9.1kg 150m",power:9.1,type:"fluoro",isLeader:true},
+            {id:122,level:29,nameRu:"Флюорокарбон 9.1кг 300м",nameEn:"Fluorocarbon 9.1kg 300m",power:9.1,type:"fluoro",isLeader:true},
+            {id:123,level:30,nameRu:"Флюорокарбон 12.7кг",nameEn:"Fluorocarbon 12.7kg",power:12.7,type:"fluoro",isLeader:true},
+            {id:124,level:33,nameRu:"Флюорокарбон 11.3кг 150м",nameEn:"Fluorocarbon 11.3kg 150m",power:11.3,type:"fluoro",isLeader:true},
+            {id:125,level:34,nameRu:"Флюорокарбон 11.3кг 300м",nameEn:"Fluorocarbon 11.3kg 300m",power:11.3,type:"fluoro",isLeader:true},
+            {id:126,level:34,nameRu:"Флюорокарбон 15.8кг",nameEn:"Fluorocarbon 15.8kg",power:15.8,type:"fluoro",isLeader:true},
+            {id:127,level:35,nameRu:"Флюорокарбон 12.7кг 150м",nameEn:"Fluorocarbon 12.7kg 150m",power:12.7,type:"fluoro",isLeader:true},
+            {id:128,level:38,nameRu:"Флюорокарбон 14.5кг",nameEn:"Fluorocarbon 14.5kg",power:14.5,type:"fluoro",isLeader:true},
+            {id:129,level:38,nameRu:"Флюорокарбон 17.4кг",nameEn:"Fluorocarbon 17.4kg",power:17.4,type:"fluoro",isLeader:true},
+            {id:130,level:39,nameRu:"Флюорокарбон 15.8кг 300м",nameEn:"Fluorocarbon 15.8kg 300m",power:15.8,type:"fluoro",isLeader:true},
+            {id:131,level:46,nameRu:"Флюорокарбон 20.0кг",nameEn:"Fluorocarbon 20.0kg",power:20.0,type:"fluoro",isLeader:true},
+            {id:132,level:46,nameRu:"Флюорокарбон 24.0кг",nameEn:"Fluorocarbon 24.0kg",power:24.0,type:"fluoro",isLeader:true},
+            {id:133,level:49,nameRu:"Флюорокарбон 24.0кг 300м",nameEn:"Fluorocarbon 24.0kg 300m",power:24.0,type:"fluoro",isLeader:true},
+            {id:134,level:50,nameRu:"Флюорокарбон 27.5кг",nameEn:"Fluorocarbon 27.5kg",power:27.5,type:"fluoro",isLeader:true},
+            {id:135,level:51,nameRu:"Флюорокарбон 27.5кг 150м",nameEn:"Fluorocarbon 27.5kg 150m",power:27.5,type:"fluoro",isLeader:true},
+            {id:136,level:52,nameRu:"Флюорокарбон 27.5кг 300м",nameEn:"Fluorocarbon 27.5kg 300m",power:27.5,type:"fluoro",isLeader:true},
+            {id:137,level:53,nameRu:"Флюорокарбон 27.5кг 500м",nameEn:"Fluorocarbon 27.5kg 500m",power:27.5,type:"fluoro",isLeader:true},
+            {id:138,level:54,nameRu:"Флюорокарбон 32.0кг",nameEn:"Fluorocarbon 32.0kg",power:32.0,type:"fluoro",isLeader:true},
+            {id:139,level:55,nameRu:"Флюорокарбон 32.0кг 150м",nameEn:"Fluorocarbon 32.0kg 150m",power:32.0,type:"fluoro",isLeader:true},
+            {id:140,level:58,nameRu:"Флюорокарбон 36.0кг",nameEn:"Fluorocarbon 36.0kg",power:36.0,type:"fluoro",isLeader:true},
+            {id:141,level:65,nameRu:"Флюорокарбон 36.0кг 150м",nameEn:"Fluorocarbon 36.0kg 150m",power:36.0,type:"fluoro",isLeader:true},
+            // Шнуры
+            {id:200,level:5,nameRu:"Шнур 1.8кг",nameEn:"Braid 1.8kg",power:1.8,type:"braid",isLeader:false},
+            {id:201,level:5,nameRu:"Шнур 2.5кг",nameEn:"Braid 2.5kg",power:2.5,type:"braid",isLeader:false},
+            {id:202,level:6,nameRu:"Шнур 1.8кг 300м",nameEn:"Braid 1.8kg 300m",power:1.8,type:"braid",isLeader:false},
+            {id:203,level:6,nameRu:"Шнур 1.8кг 500м",nameEn:"Braid 1.8kg 500m",power:1.8,type:"braid",isLeader:false},
+            {id:204,level:7,nameRu:"Шнур 1.8кг 500м",nameEn:"Braid 1.8kg 500m v2",power:1.8,type:"braid",isLeader:false},
+            {id:205,level:8,nameRu:"Шнур 3.6кг",nameEn:"Braid 3.6kg",power:3.6,type:"braid",isLeader:false},
+            {id:206,level:8,nameRu:"Шнур 3.5кг",nameEn:"Braid 3.5kg",power:3.5,type:"braid",isLeader:false},
+            {id:207,level:10,nameRu:"Шнур 2.5кг 150м",nameEn:"Braid 2.5kg 150m",power:2.5,type:"braid",isLeader:false},
+            {id:208,level:10,nameRu:"Шнур 4.5кг",nameEn:"Braid 4.5kg",power:4.5,type:"braid",isLeader:false},
+            {id:209,level:11,nameRu:"Шнур 2.7кг 150м",nameEn:"Braid 2.7kg 150m",power:2.7,type:"braid",isLeader:false},
+            {id:210,level:11,nameRu:"Шнур 2.5кг 300м",nameEn:"Braid 2.5kg 300m",power:2.5,type:"braid",isLeader:false},
+            {id:211,level:12,nameRu:"Шнур 2.7кг 300м",nameEn:"Braid 2.7kg 300m",power:2.7,type:"braid",isLeader:false},
+            {id:212,level:12,nameRu:"Шнур 2.5кг 500м",nameEn:"Braid 2.5kg 500m",power:2.5,type:"braid",isLeader:false},
+            {id:213,level:13,nameRu:"Шнур 2.7кг 500м",nameEn:"Braid 2.7kg 500m",power:2.7,type:"braid",isLeader:false},
+            {id:214,level:13,nameRu:"Шнур 3.5кг 150м",nameEn:"Braid 3.5kg 150m",power:3.5,type:"braid",isLeader:false},
+            {id:215,level:14,nameRu:"Шнур 3.5кг 300м",nameEn:"Braid 3.5kg 300m",power:3.5,type:"braid",isLeader:false},
+            {id:216,level:14,nameRu:"Шнур 3.5кг 500м",nameEn:"Braid 3.5kg 500m",power:3.5,type:"braid",isLeader:false},
+            {id:217,level:14,nameRu:"Шнур 6.0кг",nameEn:"Braid 6.0kg",power:6.0,type:"braid",isLeader:false},
+            {id:218,level:15,nameRu:"Шнур 3.6кг 150м",nameEn:"Braid 3.6kg 150m",power:3.6,type:"braid",isLeader:false},
+            {id:219,level:16,nameRu:"Шнур 3.6кг 300м",nameEn:"Braid 3.6kg 300m",power:3.6,type:"braid",isLeader:false},
+            {id:220,level:16,nameRu:"Шнур 3.6кг 500м",nameEn:"Braid 3.6kg 500m",power:3.6,type:"braid",isLeader:false},
+            {id:221,level:18,nameRu:"Шнур 4.5кг 150м",nameEn:"Braid 4.5kg 150m",power:4.5,type:"braid",isLeader:false},
+            {id:222,level:18,nameRu:"Шнур 7.7кг",nameEn:"Braid 7.7kg",power:7.7,type:"braid",isLeader:false},
+            {id:223,level:19,nameRu:"Шнур 4.5кг 300м",nameEn:"Braid 4.5kg 300m",power:4.5,type:"braid",isLeader:false},
+            {id:224,level:19,nameRu:"Шнур 4.5кг 500м",nameEn:"Braid 4.5kg 500m",power:4.5,type:"braid",isLeader:false},
+            {id:225,level:20,nameRu:"Шнур 6.0кг 150м",nameEn:"Braid 6.0kg 150m",power:6.0,type:"braid",isLeader:false},
+            {id:226,level:21,nameRu:"Шнур 6.0кг 300м",nameEn:"Braid 6.0kg 300m",power:6.0,type:"braid",isLeader:false},
+            {id:227,level:22,nameRu:"Шнур 6.0кг 500м",nameEn:"Braid 6.0kg 500m",power:6.0,type:"braid",isLeader:false},
+            {id:228,level:22,nameRu:"Шнур 9.1кг",nameEn:"Braid 9.1kg",power:9.1,type:"braid",isLeader:false},
+            {id:229,level:24,nameRu:"Шнур 10.4кг",nameEn:"Braid 10.4kg",power:10.4,type:"braid",isLeader:false},
+            {id:230,level:25,nameRu:"Шнур 12.1кг",nameEn:"Braid 12.1kg",power:12.1,type:"braid",isLeader:false},
+            {id:231,level:26,nameRu:"Шнур 7.7кг 300м",nameEn:"Braid 7.7kg 300m",power:7.7,type:"braid",isLeader:false},
+            {id:232,level:27,nameRu:"Шнур 7.7кг 500м",nameEn:"Braid 7.7kg 500m",power:7.7,type:"braid",isLeader:false},
+            {id:233,level:30,nameRu:"Шнур 8.65кг 150м",nameEn:"Braid 8.65kg 150m",power:8.65,type:"braid",isLeader:false},
+            {id:234,level:30,nameRu:"Шнур 9.1кг 150м",nameEn:"Braid 9.1kg 150m",power:9.1,type:"braid",isLeader:false},
+            {id:235,level:30,nameRu:"Шнур 12.1кг 300м",nameEn:"Braid 12.1kg 300m",power:12.1,type:"braid",isLeader:false},
+            {id:236,level:31,nameRu:"Шнур 8.65кг 300м",nameEn:"Braid 8.65kg 300m",power:8.65,type:"braid",isLeader:false},
+            {id:237,level:31,nameRu:"Шнур 9.1кг 300м",nameEn:"Braid 9.1kg 300m",power:9.1,type:"braid",isLeader:false},
+            {id:238,level:32,nameRu:"Шнур 10.4кг 150м",nameEn:"Braid 10.4kg 150m",power:10.4,type:"braid",isLeader:false},
+            {id:239,level:32,nameRu:"Шнур 8.65кг 500м",nameEn:"Braid 8.65kg 500m",power:8.65,type:"braid",isLeader:false},
+            {id:240,level:32,nameRu:"Шнур 9.1кг 500м",nameEn:"Braid 9.1kg 500m",power:9.1,type:"braid",isLeader:false},
+            {id:241,level:34,nameRu:"Шнур 12.1кг 150м",nameEn:"Braid 12.1kg 150m",power:12.1,type:"braid",isLeader:false},
+            {id:242,level:34,nameRu:"Шнур 10.4кг 300м",nameEn:"Braid 10.4kg 300m",power:10.4,type:"braid",isLeader:false},
+            {id:243,level:35,nameRu:"Шнур 12.1кг 300м v2",nameEn:"Braid 12.1kg 300m v2",power:12.1,type:"braid",isLeader:false},
+            {id:244,level:36,nameRu:"Шнур 13.6кг 150м",nameEn:"Braid 13.6kg 150m",power:13.6,type:"braid",isLeader:false},
+            {id:245,level:36,nameRu:"Шнур 12.1кг 500м",nameEn:"Braid 12.1kg 500m",power:12.1,type:"braid",isLeader:false},
+            {id:246,level:37,nameRu:"Шнур 13.6кг 300м",nameEn:"Braid 13.6kg 300m",power:13.6,type:"braid",isLeader:false},
+            {id:247,level:38,nameRu:"Шнур 15.4кг 150м",nameEn:"Braid 15.4kg 150m",power:15.4,type:"braid",isLeader:false},
+            {id:248,level:38,nameRu:"Шнур 20.85кг",nameEn:"Braid 20.85kg",power:20.85,type:"braid",isLeader:false},
+            {id:249,level:39,nameRu:"Шнур 15.4кг 300м",nameEn:"Braid 15.4kg 300m",power:15.4,type:"braid",isLeader:false},
+            {id:250,level:40,nameRu:"Шнур 17.1кг 150м",nameEn:"Braid 17.1kg 150m",power:17.1,type:"braid",isLeader:false},
+            {id:251,level:40,nameRu:"Шнур 15.4кг 500м",nameEn:"Braid 15.4kg 500m",power:15.4,type:"braid",isLeader:false},
+            {id:252,level:42,nameRu:"Шнур 20.85кг 150м",nameEn:"Braid 20.85kg 150m",power:20.85,type:"braid",isLeader:false},
+            {id:253,level:42,nameRu:"Шнур 18.7кг 300м",nameEn:"Braid 18.7kg 300m",power:18.7,type:"braid",isLeader:false},
+            {id:254,level:42,nameRu:"Шнур 24.0кг",nameEn:"Braid 24.0kg",power:24.0,type:"braid",isLeader:false},
+            {id:255,level:46,nameRu:"Шнур 18.7кг 150м",nameEn:"Braid 18.7kg 150m",power:18.7,type:"braid",isLeader:false},
+            {id:256,level:46,nameRu:"Шнур 24.0кг 150м",nameEn:"Braid 24.0kg 150m",power:24.0,type:"braid",isLeader:false},
+            {id:257,level:46,nameRu:"Шнур 25.9кг",nameEn:"Braid 25.9kg",power:25.9,type:"braid",isLeader:false},
+            {id:258,level:46,nameRu:"Шнур 30.0кг",nameEn:"Braid 30.0kg",power:30.0,type:"braid",isLeader:false},
+            {id:259,level:47,nameRu:"Шнур 18.7кг 300м v2",nameEn:"Braid 18.7kg 300m v2",power:18.7,type:"braid",isLeader:false},
+            {id:260,level:47,nameRu:"Шнур 24.0кг 300м",nameEn:"Braid 24.0kg 300m",power:24.0,type:"braid",isLeader:false},
+            {id:261,level:48,nameRu:"Шнур 18.7кг 500м",nameEn:"Braid 18.7kg 500m",power:18.7,type:"braid",isLeader:false},
+            {id:262,level:48,nameRu:"Шнур 24.0кг 500м",nameEn:"Braid 24.0kg 500m",power:24.0,type:"braid",isLeader:false},
+            {id:263,level:49,nameRu:"Шнур 25.9кг 150м",nameEn:"Braid 25.9kg 150m",power:25.9,type:"braid",isLeader:false},
+            {id:264,level:49,nameRu:"Шнур 25.9кг 300м",nameEn:"Braid 25.9kg 300m",power:25.9,type:"braid",isLeader:false},
+            {id:265,level:49,nameRu:"Шнур 25.9кг 500м",nameEn:"Braid 25.9kg 500m",power:25.9,type:"braid",isLeader:false},
+            {id:266,level:50,nameRu:"Шнур 30.0кг 150м",nameEn:"Braid 30.0kg 150m",power:30.0,type:"braid",isLeader:false},
+            {id:267,level:50,nameRu:"Шнур 30.0кг 300м",nameEn:"Braid 30.0kg 300m",power:30.0,type:"braid",isLeader:false},
+            {id:268,level:50,nameRu:"Шнур 30.0кг 500м",nameEn:"Braid 30.0kg 500m",power:30.0,type:"braid",isLeader:false},
+            {id:269,level:50,nameRu:"Шнур 28.0кг 1000м",nameEn:"Braid 28.0kg 1000m",power:28.0,type:"braid",isLeader:false},
+            {id:270,level:52,nameRu:"Шнур 28.0кг 150м",nameEn:"Braid 28.0kg 150m",power:28.0,type:"braid",isLeader:false},
+            {id:271,level:53,nameRu:"Шнур 28.0кг 300м",nameEn:"Braid 28.0kg 300m",power:28.0,type:"braid",isLeader:false},
+            {id:272,level:54,nameRu:"Шнур 28.0кг 500м",nameEn:"Braid 28.0kg 500m",power:28.0,type:"braid",isLeader:false},
+            {id:273,level:54,nameRu:"Шнур 31.5кг 1000м",nameEn:"Braid 31.5kg 1000m",power:31.5,type:"braid",isLeader:false},
+            {id:274,level:54,nameRu:"Шнур 34.8кг 1000м",nameEn:"Braid 34.8kg 1000m",power:34.8,type:"braid",isLeader:false},
+            {id:275,level:55,nameRu:"Шнур 31.5кг 150м",nameEn:"Braid 31.5kg 150m",power:31.5,type:"braid",isLeader:false},
+            {id:276,level:55,nameRu:"Шнур 31.5кг 300м",nameEn:"Braid 31.5kg 300m",power:31.5,type:"braid",isLeader:false},
+            {id:277,level:55,nameRu:"Шнур 31.5кг 500м",nameEn:"Braid 31.5kg 500m",power:31.5,type:"braid",isLeader:false},
+            {id:278,level:63,nameRu:"Шнур 34.8кг 150м",nameEn:"Braid 34.8kg 150m",power:34.8,type:"braid",isLeader:false},
+            {id:279,level:63,nameRu:"Шнур 34.8кг 300м",nameEn:"Braid 34.8kg 300m",power:34.8,type:"braid",isLeader:false},
+            {id:280,level:63,nameRu:"Шнур 34.8кг 500м",nameEn:"Braid 34.8kg 500m",power:34.8,type:"braid",isLeader:false},
+            {id:281,level:68,nameRu:"Шнур 40.0кг 1000м",nameEn:"Braid 40.0kg 1000m",power:40.0,type:"braid",isLeader:false},
+            {id:282,level:70,nameRu:"Шнур 40.0кг 150м",nameEn:"Braid 40.0kg 150m",power:40.0,type:"braid",isLeader:false},
+            {id:283,level:70,nameRu:"Шнур 40.0кг 300м",nameEn:"Braid 40.0kg 300m",power:40.0,type:"braid",isLeader:false},
+            {id:284,level:70,nameRu:"Шнур 40.0кг 500м",nameEn:"Braid 40.0kg 500m",power:40.0,type:"braid",isLeader:false},
+            // Титановые поводки
+            {id:300,level:3,nameRu:"Титан 3.2кг",nameEn:"Titanium 3.2kg",power:3.2,type:"titanium",isLeader:true},
+            {id:301,level:10,nameRu:"Титан 5.0кг",nameEn:"Titanium 5.0kg",power:5.0,type:"titanium",isLeader:true},
+            {id:302,level:18,nameRu:"Титан 5.8кг",nameEn:"Titanium 5.8kg",power:5.8,type:"titanium",isLeader:true},
+            {id:303,level:22,nameRu:"Титан 8.5кг",nameEn:"Titanium 8.5kg",power:8.5,type:"titanium",isLeader:true},
+            {id:304,level:26,nameRu:"Титан 11.8кг",nameEn:"Titanium 11.8kg",power:11.8,type:"titanium",isLeader:true},
+            {id:305,level:30,nameRu:"Титан 14.5кг",nameEn:"Titanium 14.5kg",power:14.5,type:"titanium",isLeader:true},
+            {id:306,level:36,nameRu:"Титан 18.6кг",nameEn:"Titanium 18.6kg",power:18.6,type:"titanium",isLeader:true},
+            {id:307,level:40,nameRu:"Титан 25.1кг",nameEn:"Titanium 25.1kg",power:25.1,type:"titanium",isLeader:true},
+            {id:308,level:42,nameRu:"Титан 31.6кг",nameEn:"Titanium 31.6kg",power:31.6,type:"titanium",isLeader:true},
+            {id:309,level:46,nameRu:"Титан 37.0кг",nameEn:"Titanium 37.0kg",power:37.0,type:"titanium",isLeader:true},
+            {id:310,level:50,nameRu:"Титан 39.5кг",nameEn:"Titanium 39.5kg",power:39.5,type:"titanium",isLeader:true},
+            {id:311,level:55,nameRu:"Титан 37.0кг v2",nameEn:"Titanium 37.0kg v2",power:37.0,type:"titanium",isLeader:true},
+            {id:312,level:70,nameRu:"Титан 39.5кг v2",nameEn:"Titanium 39.5kg v2",power:39.5,type:"titanium",isLeader:true},
+        ];
+
+        // ==================== LOGIC ====================
+        function getRodTypeForReel(rodType) {
+            // Кастинг → мультипликатор, всё остальное → безынерц
+            return rodType === 'casting' ? 'casting' : 'spinning';
+        }
+
+        function calculateVerdict(reelPower, linePower, maxRecommended) {
+            if (reelPower > maxRecommended * 1.15) return 'strong';
+            if (reelPower >= maxRecommended * 0.95) return 'excellent';
+            if (reelPower >= maxRecommended * 0.8) return 'good';
+            return 'weak';
+        }
+
+        function getDragSetting(ratio) {
+            const t = i18n[currentLang];
+            if (ratio >= 0.95 && ratio <= 1.05) return { text: currentLang === 'ru' ? "на 7/8 или 11/12" : "at 7/8 or 11/12", maxMultiplier: 1.0 };
+            if (ratio > 1.05 && ratio <= 1.15) return { text: currentLang === 'ru' ? "на 5/6 или 10/12" : "at 5/6 or 10/12", maxMultiplier: 1.15 };
+            if (ratio > 1.15) return { text: currentLang === 'ru' ? "на максимум" : "to maximum", maxMultiplier: 1.3, warning: true };
+            return { text: currentLang === 'ru' ? "на 3/4" : "at 3/4", maxMultiplier: 0.85, weakWarning: true };
+        }
+
         function calculate() {
             const rodId = document.getElementById('rod-select').value;
             const lineId = document.getElementById('line-select').value;
-            const reelId = document.getElementById('reel-select').value;
             const resultBox = document.getElementById('result-box');
             const lineTip = document.getElementById('line-tip');
-            const warningBox = document.getElementById('res-warning');
-            const recSection = document.getElementById('reel-recommendations');
-            const recList = document.getElementById('rec-list');
 
             if (!rodId || !lineId) {
                 resultBox.classList.add('hidden');
-                lineTip.classList.add('hidden');
-                recSection.classList.add('hidden');
                 return;
             }
 
             const rod = rods.find(r => r.id == rodId);
             const line = lines.find(l => l.id == lineId);
-            const selectedReel = reelId ? reels.find(r => r.id == reelId) : null;
+            const t = i18n[currentLang];
 
-            // Show tip if leader is selected
+            // Line tip
             if (line.isLeader) {
                 lineTip.classList.remove('hidden');
-                lineTip.textContent = i18n[currentLang].lineTip;
+                document.getElementById('line-tip-text').textContent = t.lineTip;
             } else {
                 lineTip.classList.add('hidden');
             }
 
-            // Calculate required drag and verdict
-            let dragSetting = "";
-            let verdict = "";
-            let verdictClass = "";
-            let showWarning = false;
-
             const ratio = line.power / rod.power;
+            const dragInfo = getDragSetting(ratio);
+            const maxRecommended = rod.power * dragInfo.maxMultiplier;
 
-            // Эвристика на основе данных из твоей таблицы:
-            if (ratio >= 0.95 && ratio <= 1.05) {
-                dragSetting = currentLang === 'ru' ? "на 7/8 или 11/12" : "at 7/8 or 11/12";
-                verdict = i18n[currentLang].verdictExcellent;
-                verdictClass = "bg-green-900/40 text-green-400 border border-green-700";
-            } else if (ratio > 1.05 && ratio <= 1.15) {
-                dragSetting = currentLang === 'ru' ? "на 5/6 или 10/12" : "at 5/6 or 10/12";
-                verdict = i18n[currentLang].verdictGood;
-                verdictClass = "bg-blue-900/40 text-blue-400 border border-blue-700";
-            } else if (ratio > 1.15) {
-                dragSetting = currentLang === 'ru' ? "на максимум" : "to the maximum";
-                verdict = i18n[currentLang].verdictStrong;
-                verdictClass = "bg-yellow-900/40 text-yellow-400 border border-yellow-700";
-                showWarning = true;
-            } else {
-                dragSetting = currentLang === 'ru' ? "на 3/4" : "at 3/4";
-                verdict = i18n[currentLang].verdictWeak;
-                verdictClass = "bg-red-900/40 text-red-400 border border-red-700";
-            }
+            // Update results
+            document.getElementById('res-drag').textContent = dragInfo.text;
+            document.getElementById('res-max').textContent = maxRecommended.toFixed(2) + ' ' + t.kg;
 
-            // If a reel is selected, check compatibility
-            if (selectedReel) {
-                // Check type compatibility (spinning rod needs spinning reel, casting rod needs casting reel)
-                if ((rod.type === 'spinning' || rod.type === 'feeder' || rod.type === 'match' || rod.type === 'telescopic') && selectedReel.type !== 'spinning') {
-                    verdict = currentLang === 'ru' ? "❌ Не подходит тип катушки!" : "❌ Incompatible reel type!";
-                    verdictClass = "bg-red-900/40 text-red-400 border border-red-700";
-                    showWarning = true;
-                } else if (rod.type === 'casting' && selectedReel.type !== 'casting') {
-                    verdict = currentLang === 'ru' ? "❌ Не подходит тип катушки!" : "❌ Incompatible reel type!";
-                    verdictClass = "bg-red-900/40 text-red-400 border border-red-700";
-                    showWarning = true;
-                } else {
-                    // Check if reel power is sufficient for the required drag setting
-                    const requiredDragPower = line.power * (ratio >= 1.15 ? 1 : (ratio > 1.05 ? 0.85 : 0.9));
-                    if (selectedReel.power < requiredDragPower * 0.9) {
-                        verdict = i18n[currentLang].verdictWeak;
-                        verdictClass = "bg-red-900/40 text-red-400 border border-red-700";
-                        showWarning = true;
-                    } else if (selectedReel.power > requiredDragPower * 1.1) {
-                        verdict = i18n[currentLang].verdictStrong;
-                        verdictClass = "bg-yellow-900/40 text-yellow-400 border border-yellow-700";
-                        showWarning = true;
-                    } else {
-                        verdict = i18n[currentLang].verdictExcellent;
-                        verdictClass = "bg-green-900/40 text-green-400 border border-green-700";
-                    }
-                }
-            }
-
-            // Update UI
-            document.getElementById('res-drag').textContent = dragSetting;
-            
-            const verdictEl = document.getElementById('res-verdict');
-            verdictEl.textContent = verdict;
-            verdictEl.className = `text-lg font-bold px-3 py-1 rounded ${verdictClass}`;
-
-            if (showWarning) {
-                document.getElementById('res-warning-text').textContent = i18n[currentLang].warningStrong;
+            // Warnings
+            const warningBox = document.getElementById('res-warning');
+            if (dragInfo.warning) {
+                document.getElementById('res-warning-text').textContent = t.warningStrong;
+                warningBox.classList.remove('hidden');
+            } else if (dragInfo.weakWarning) {
+                document.getElementById('res-warning-text').textContent = t.warningWeak;
                 warningBox.classList.remove('hidden');
             } else {
                 warningBox.classList.add('hidden');
             }
 
-            resultBox.classList.remove('hidden');
+            // Find suitable reels
+            const requiredReelType = getRodTypeForReel(rod.type);
+            const playerLevel = parseInt(document.getElementById('level-filter').value);
 
-            // Show reel recommendations if no reel is selected
-            if (!reelId) {
-                recSection.classList.remove('hidden');
-                document.getElementById('rec-title').textContent = i18n[currentLang].recTitle;
-                
-                // Filter compatible reels
-                const compatibleReels = reels.filter(reel => {
-                    if ((rod.type === 'spinning' || rod.type === 'feeder' || rod.type === 'match' || rod.type === 'telescopic') && reel.type !== 'spinning') return false;
-                    if (rod.type === 'casting' && reel.type !== 'casting') return false;
-                    
-                    const requiredDragPower = line.power * (ratio >= 1.15 ? 1 : (ratio > 1.05 ? 0.85 : 0.9));
-                    return reel.power >= requiredDragPower * 0.9 && reel.power <= requiredDragPower * 1.1;
+            const suitableReels = reels
+                .filter(r => r.type === requiredReelType && r.level <= playerLevel)
+                .map(r => {
+                    const verdict = calculateVerdict(r.power, line.power, maxRecommended);
+                    return { ...r, verdict };
+                })
+                .sort((a, b) => {
+                    const order = { excellent: 0, good: 1, strong: 2, weak: 3 };
+                    return order[a.verdict] - order[b.verdict] || a.power - b.power;
                 });
 
-                // Render recommendations
-                recList.innerHTML = '';
-                if (compatibleReels.length === 0) {
-                    recList.innerHTML = `<div class="p-3 text-slate-400">${currentLang === 'ru' ? 'Нет подходящих катушек' : 'No suitable reels found'}</div>`;
-                } else {
-                    compatibleReels.forEach(reel => {
-                        const item = document.createElement('div');
-                        item.className = 'reel-item';
-                        item.textContent = currentLang === 'ru' ? reel.nameRu : reel.nameEn;
-                        item.onclick = () => {
-                            document.getElementById('reel-select').value = reel.id;
-                            calculate();
-                        };
-                        recList.appendChild(item);
-                    });
-                }
+            // Render reels
+            const reelList = document.getElementById('reel-list');
+            reelList.innerHTML = '';
+            document.getElementById('reel-count').textContent = `(${suitableReels.length})`;
+
+            if (suitableReels.length === 0) {
+                reelList.innerHTML = `<div class="text-slate-500 text-center py-4">${currentLang === 'ru' ? 'Нет доступных катушек' : 'No reels available'}</div>`;
             } else {
-                recSection.classList.add('hidden');
+                suitableReels.forEach(r => {
+                    const verdictClass = `verdict-${r.verdict}`;
+                    const verdictText = t[`verdict${r.verdict.charAt(0).toUpperCase() + r.verdict.slice(1)}`];
+                    const reelName = currentLang === 'ru' ? r.nameRu : r.nameEn;
+                    const reelTypeName = t.reelTypeNames[r.type];
+                    
+                    const div = document.createElement('div');
+                    div.className = `reel-item ${verdictClass} border rounded-lg p-3 flex justify-between items-center`;
+                    div.innerHTML = `
+                        <div>
+                            <div class="font-semibold">${reelName}</div>
+                            <div class="text-xs opacity-75">${reelTypeName} · ${t.level} ${r.level} · ${r.power} ${t.kg} · ${r.speed} см/об</div>
+                        </div>
+                        <div class="font-bold text-sm">${verdictText}</div>
+                    `;
+                    reelList.appendChild(div);
+                });
             }
+
+            resultBox.classList.remove('hidden');
         }
 
-        // --- 4. Language Switcher ---
-        function setLang(lang) {
-            currentLang = lang;
+        function filterData() {
+            const playerLevel = parseInt(document.getElementById('level-filter').value);
+            const t = i18n[currentLang];
+
+            // Filter rods
+            const rodSelect = document.getElementById('rod-select');
+            const currentRod = rodSelect.value;
+            rodSelect.innerHTML = `<option value="">${t.placeholderRod}</option>`;
             
-            // Toggle button styles
-            document.getElementById('btn-ru').className = lang === 'ru' ? "px-3 py-1 rounded bg-blue-600 text-white font-semibold transition" : "px-3 py-1 rounded bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600";
-            document.getElementById('btn-en').className = lang === 'en' ? "px-3 py-1 rounded bg-blue-600 text-white font-semibold transition" : "px-3 py-1 rounded bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600";
+            rods.filter(r => r.level <= playerLevel && (currentRodType === 'all' || r.type === currentRodType))
+                .forEach(rod => {
+                    const opt = document.createElement('option');
+                    opt.value = rod.id;
+                    const typeName = t.rodTypeNames[rod.type] || rod.type;
+                    opt.textContent = `[${t.level} ${rod.level}] ${currentLang === 'ru' ? rod.nameRu : rod.nameEn} — ${rod.power}${t.kg}`;
+                    if (rod.id == currentRod) opt.selected = true;
+                    rodSelect.appendChild(opt);
+                });
 
-            // Update static text
-            document.getElementById('label-rod').textContent = i18n[lang].labelRod;
-            document.getElementById('label-line').textContent = i18n[lang].labelLine;
-            document.getElementById('label-reel').textContent = i18n[lang].labelReel;
-            document.getElementById('res-drag-label').textContent = i18n[lang].dragLabel;
-            document.getElementById('res-verdict-label').textContent = i18n[lang].verdictLabel;
-            document.getElementById('footer-text').textContent = i18n[lang].footer;
-
-            // Update placeholders
-            document.querySelector('#rod-select option[value=""]').textContent = i18n[lang].placeholderRod;
-            document.querySelector('#line-select option[value=""]').textContent = i18n[lang].placeholderLine;
-            document.querySelector('#reel-select option[value=""]').textContent = i18n[lang].placeholderReel;
-
-            // Re-render dropdowns
-            renderDropdowns();
+            // Filter lines
+            const lineSelect = document.getElementById('line-select');
+            const currentLine = lineSelect.value;
+            lineSelect.innerHTML = `<option value="">${t.placeholderLine}</option>`;
             
-            // Recalculate if values are selected
+            lines.filter(l => l.level <= playerLevel)
+                .forEach(line => {
+                    const opt = document.createElement('option');
+                    opt.value = line.id;
+                    const typeName = t.lineTypeNames[line.type] || line.type;
+                    const leaderMark = line.isLeader ? (currentLang === 'ru' ? ' [П]' : ' [L]') : '';
+                    opt.textContent = `[${t.level} ${line.level}] ${currentLang === 'ru' ? line.nameRu : line.nameEn} — ${line.power}${t.kg}${leaderMark}`;
+                    if (line.id == currentLine) opt.selected = true;
+                    lineSelect.appendChild(opt);
+                });
+
             calculate();
         }
 
-        function renderDropdowns() {
-            const rodSelect = document.getElementById('rod-select');
-            const currentRod = rodSelect.value;
-            rodSelect.innerHTML = `<option value="">${i18n[currentLang].placeholderRod}</option>`;
-            rods.forEach(rod => {
-                const opt = document.createElement('option');
-                opt.value = rod.id;
-                opt.textContent = currentLang === 'ru' ? rod.nameRu : rod.nameEn;
-                if (rod.id == currentRod) opt.selected = true;
-                rodSelect.appendChild(opt);
+        function setRodType(type) {
+            currentRodType = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+            document.getElementById('rod-select').value = '';
+            filterData();
+        }
+
+        function updateLevelDisplay() {
+            document.getElementById('level-display').textContent = document.getElementById('level-filter').value;
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            const t = i18n[lang];
+
+            document.getElementById('btn-ru').className = lang === 'ru' ? "px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold transition hover:bg-blue-700" : "px-4 py-2 rounded-lg bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600";
+            document.getElementById('btn-en').className = lang === 'en' ? "px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold transition hover:bg-blue-700" : "px-4 py-2 rounded-lg bg-slate-700 text-slate-300 font-semibold transition hover:bg-slate-600";
+
+            document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('label-level').textContent = t.labelLevel;
+            document.getElementById('label-rod-type').textContent = t.labelRodType;
+            document.getElementById('label-rod').textContent = t.labelRod;
+            document.getElementById('label-line').textContent = t.labelLine;
+            document.getElementById('res-drag-label').textContent = t.dragLabel;
+            document.getElementById('res-max-label').textContent = t.maxLabel;
+            document.getElementById('res-reels-label').textContent = t.reelsLabel;
+            document.getElementById('footer-text').textContent = t.footer;
+
+            // Update rod type buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const type = btn.dataset.type;
+                btn.textContent = t.rodTypes[type] || type;
             });
 
-            const lineSelect = document.getElementById('line-select');
-            const currentLine = lineSelect.value;
-            lineSelect.innerHTML = `<option value="">${i18n[currentLang].placeholderLine}</option>`;
-            lines.forEach(line => {
-                const opt = document.createElement('option');
-                opt.value = line.id;
-                opt.textContent = currentLang === 'ru' ? line.nameRu : line.nameEn;
-                if (line.id == currentLine) opt.selected = true;
-                lineSelect.appendChild(opt);
-            });
-
-            const reelSelect = document.getElementById('reel-select');
-            const currentReel = reelSelect.value;
-            reelSelect.innerHTML = `<option value="">${i18n[currentLang].placeholderReel}</option>`;
-            reels.forEach(reel => {
-                const opt = document.createElement('option');
-                opt.value = reel.id;
-                opt.textContent = currentLang === 'ru' ? reel.nameRu : reel.nameEn;
-                if (reel.id == currentReel) opt.selected = true;
-                reelSelect.appendChild(opt);
-            });
+            filterData();
         }
 
         // Initialize
-        renderDropdowns();
+        filterData();
     </script>
 </body>
 </html>
