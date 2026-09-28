@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fp-gear-calc.pages.dev/sitemap.xml
