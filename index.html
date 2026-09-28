@@ -820,8 +820,8 @@
 
         const requiredReelType = getRodTypeForReel(rod.type);
         const playerLevel = parseInt(document.getElementById('level-filter').value);
-         console.log('Player level:', playerLevel); // Добавь эту строку
-         console.log('Current rod type:', currentRodType); // И эту
+         console.log('Player level:', playerLevel); 
+         console.log('Current rod type:', currentRodType); 
 
         const suitableReels = reels
             .filter(r => r.type === requiredReelType && r.level <= playerLevel)
@@ -867,7 +867,7 @@
                 if (rod.id == currentRod) opt.selected = true;
                 rodSelect.appendChild(opt);
             });
-// ---
+
         const filteredRods = rods.filter(r => r.level <= playerLevel && (currentRodType === 'all' || r.type === currentRodType));
     console.log('Filtered rods count:', filteredRods.length);
           filteredRods.forEach(rod => {
@@ -877,7 +877,7 @@
         if (rod.id == currentRod) opt.selected = true;
         rodSelect.appendChild(opt);
     });
-//---
+
         const lineSelect = document.getElementById('line-select');
         const currentLine = lineSelect.value;
         lineSelect.innerHTML = `<option value="">${t.placeholderLine}</option>`;
