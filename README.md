@@ -1,1 +1,2 @@
-# FishingPlanetCalculator ⚓ https://fp-gear-calc.pages.dev/
+# FishingPlanetCalculator 
+⚓ https://fp-gear-calc.pages.dev/
